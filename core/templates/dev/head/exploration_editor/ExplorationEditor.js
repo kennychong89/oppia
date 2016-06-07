@@ -20,6 +20,9 @@
 oppia.constant('INTERACTION_SPECS', GLOBALS.INTERACTION_SPECS);
 oppia.constant('GADGET_SPECS', GLOBALS.GADGET_SPECS);
 oppia.constant('PANEL_SPECS', GLOBALS.PANEL_SPECS);
+oppia.constant(
+  'EXPLORATION_TITLE_INPUT_FOCUS_LABEL',
+  'explorationTitleInputFocusLabel');
 
 oppia.controller('ExplorationEditor', [
   '$scope', '$http', '$window', '$modal', '$rootScope', '$log', '$timeout',
@@ -31,7 +34,8 @@ oppia.controller('ExplorationEditor', [
   'routerService', 'graphDataService', 'stateEditorTutorialFirstTimeService',
   'explorationParamSpecsService', 'explorationParamChangesService',
   'explorationWarningsService', '$templateCache', 'explorationContextService',
-  'explorationAdvancedFeaturesService', 'EditorModeService',
+  'explorationAdvancedFeaturesService', 'changeListService',
+  'autosaveInfoModalsService', 'EditorModeService',
   function(
       $scope, $http, $window, $modal, $rootScope, $log, $timeout,
       explorationData, editorContextService, explorationTitleService,
@@ -42,7 +46,8 @@ oppia.controller('ExplorationEditor', [
       routerService, graphDataService, stateEditorTutorialFirstTimeService,
       explorationParamSpecsService, explorationParamChangesService,
       explorationWarningsService, $templateCache, explorationContextService,
-      explorationAdvancedFeaturesService, EditorModeService) {
+      explorationAdvancedFeaturesService, changeListService,
+      autosaveInfoModalsService, EditorModeService) {
     $scope.editabilityService = editabilityService;
     $scope.editorContextService = editorContextService;
 
@@ -135,11 +140,26 @@ oppia.controller('ExplorationEditor', [
 
         if (!routerService.isLocationSetToNonStateEditorTab() &&
             !data.states.hasOwnProperty(
-              routerService.getCurrentStateFromLocationPath())) {
+              routerService.getCurrentStateFromLocationPath('gui'))) {
           routerService.navigateToMainTab();
         }
 
         explorationWarningsService.updateWarnings();
+
+        // Initialize changeList by draft changes if they exist.
+        if (data.draft_changes !== null) {
+          changeListService.loadAutosavedChangeList(data.draft_changes);
+        }
+
+        if (data.is_version_of_draft_valid === false &&
+            data.draft_changes !== null &&
+            data.draft_changes.length > 0) {
+          // Show modal displaying lost changes if the version of draft
+          // changes is invalid, and draft_changes is not `null`.
+          autosaveInfoModalsService.showVersionMismatchModal(
+            changeListService.getChangeList());
+          return;
+        }
 
         $scope.$broadcast('refreshStatisticsTab');
         $scope.$broadcast('refreshVersionHistory', {
@@ -434,8 +454,11 @@ oppia.controller('EditorNavigation', [
 ]);
 
 oppia.controller('EditorNavbarBreadcrumb', [
-  '$scope', 'explorationTitleService', 'routerService',
-  function($scope, explorationTitleService, routerService) {
+  '$scope', 'explorationTitleService', 'routerService', 'focusService',
+  'EXPLORATION_TITLE_INPUT_FOCUS_LABEL',
+  function(
+      $scope, explorationTitleService, routerService, focusService,
+      EXPLORATION_TITLE_INPUT_FOCUS_LABEL) {
     $scope.navbarTitle = null;
     $scope.$on('explorationPropertyChanged', function() {
       var _MAX_TITLE_LENGTH = 20;
@@ -445,6 +468,11 @@ oppia.controller('EditorNavbarBreadcrumb', [
           $scope.navbarTitle.substring(0, _MAX_TITLE_LENGTH - 3) + '...');
       }
     });
+
+    $scope.editTitle = function() {
+      routerService.navigateToSettingsTab();
+      focusService.setFocus(EXPLORATION_TITLE_INPUT_FOCUS_LABEL);
+    };
 
     var _TAB_NAMES_TO_HUMAN_READABLE_NAMES = {
       main: 'Edit',
@@ -471,13 +499,19 @@ oppia.controller('ExplorationSaveAndPublishButtons', [
   'alertsService', 'changeListService', 'focusService', 'routerService',
   'explorationData', 'explorationRightsService', 'editabilityService',
   'explorationWarningsService', 'siteAnalyticsService',
-  'explorationObjectiveService',
+  'explorationObjectiveService', 'explorationTitleService',
+  'explorationCategoryService', 'explorationStatesService', 'CATEGORY_LIST',
+  'explorationLanguageCodeService', 'explorationTagsService',
+  'autosaveInfoModalsService',
   function(
       $scope, $http, $rootScope, $window, $timeout, $modal,
       alertsService, changeListService, focusService, routerService,
       explorationData, explorationRightsService, editabilityService,
       explorationWarningsService, siteAnalyticsService,
-      explorationObjectiveService) {
+      explorationObjectiveService, explorationTitleService,
+      explorationCategoryService, explorationStatesService, CATEGORY_LIST,
+      explorationLanguageCodeService, explorationTagsService,
+      autosaveInfoModalsService) {
     // Whether or not a save action is currently in progress.
     $scope.isSaveInProgress = false;
     // Whether or not a discard action is currently in progress.
@@ -502,7 +536,9 @@ oppia.controller('ExplorationSaveAndPublishButtons', [
     };
 
     $scope.discardChanges = function() {
-      var confirmDiscard = confirm('Do you want to discard your changes?');
+      var confirmDiscard = confirm(
+        'Are you sure you want to discard your changes?');
+
       if (confirmDiscard) {
         alertsService.clearWarnings();
         $rootScope.$broadcast('externalSave');
@@ -514,6 +550,11 @@ oppia.controller('ExplorationSaveAndPublishButtons', [
           $scope.lastSaveOrDiscardAction = 'discard';
           $scope.isDiscardInProgress = false;
         });
+
+        // The reload is necessary because, otherwise, the
+        // exploration-with-draft-changes will be reloaded (since it is already
+        // cached in explorationData).
+        location.reload();
       }
     };
 
@@ -532,15 +573,6 @@ oppia.controller('ExplorationSaveAndPublishButtons', [
         )
       );
     };
-
-    $window.addEventListener('beforeunload', function(e) {
-      if ($scope.isExplorationLockedForEditing()) {
-        var confirmationMessage = (
-          'You have unsaved changes which will be lost if you leave the page.');
-        (e || $window.event).returnValue = confirmationMessage;
-        return confirmationMessage;
-      }
-    });
 
     $scope.isPublic = function() {
       return explorationRightsService.isPublic();
@@ -622,29 +654,135 @@ oppia.controller('ExplorationSaveAndPublishButtons', [
         explorationData.explorationId);
       alertsService.clearWarnings();
 
-      // If the objective has not yet been specified, open the pre-publication
+      var additionalMetadataNeeded = (
+        !explorationTitleService.savedMemento ||
+        !explorationObjectiveService.savedMemento ||
+        !explorationCategoryService.savedMemento ||
+        explorationLanguageCodeService.savedMemento ===
+          GLOBALS.DEFAULT_LANGUAGE_CODE ||
+        explorationTagsService.savedMemento.length === 0);
+
+      // If the metadata has not yet been specified, open the pre-publication
       // 'add exploration metadata' modal.
-      if (!explorationObjectiveService.savedMemento) {
+      if (additionalMetadataNeeded) {
         $modal.open({
           templateUrl: 'modals/addExplorationMetadata',
           backdrop: true,
           controller: [
             '$scope', '$modalInstance', 'explorationObjectiveService',
-            function($scope, $modalInstance, explorationObjectiveService) {
-              // If no objective has been specified yet, require the creator
-              // to specify it.
+            'explorationTitleService', 'explorationCategoryService',
+            'explorationStatesService', 'CATEGORY_LIST',
+            'explorationLanguageCodeService', 'explorationTagsService',
+            function($scope, $modalInstance, explorationObjectiveService,
+            explorationTitleService, explorationCategoryService,
+            explorationStatesService, CATEGORY_LIST,
+            explorationLanguageCodeService, explorationTagsService) {
+              $scope.explorationTitleService = explorationTitleService;
               $scope.explorationObjectiveService = explorationObjectiveService;
+              $scope.explorationCategoryService = explorationCategoryService;
+              $scope.explorationLanguageCodeService = (
+                explorationLanguageCodeService);
+              $scope.explorationTagsService = explorationTagsService;
+
+              $scope.requireTitleToBeSpecified = (
+                !explorationTitleService.savedMemento);
               $scope.requireObjectiveToBeSpecified = (
                 !explorationObjectiveService.savedMemento);
+              $scope.requireCategoryToBeSpecified = (
+                !explorationCategoryService.savedMemento);
+              $scope.askForLanguageCheck = (
+                explorationLanguageCodeService.savedMemento ===
+                GLOBALS.DEFAULT_LANGUAGE_CODE);
+              $scope.askForTags = (
+                explorationTagsService.savedMemento.length === 0);
+
+              $scope.TAG_REGEX = GLOBALS.TAG_REGEX;
+
+              $scope.CATEGORY_LIST_FOR_SELECT2 = [];
+
+              for (var i = 0; i < CATEGORY_LIST.length; i++) {
+                $scope.CATEGORY_LIST_FOR_SELECT2.push({
+                  id: CATEGORY_LIST[i],
+                  text: CATEGORY_LIST[i]
+                });
+              }
+
+              var _states = explorationStatesService.getStates();
+              if (_states) {
+                var categoryIsInSelect2 = $scope.CATEGORY_LIST_FOR_SELECT2
+                .some(
+                  function(categoryItem) {
+                    return categoryItem.id ===
+                    explorationCategoryService.savedMemento;
+                  }
+                );
+
+                // If the current category is not in the dropdown, add it
+                // as the first option.
+                if (!categoryIsInSelect2 &&
+                    explorationCategoryService.savedMemento) {
+                  $scope.CATEGORY_LIST_FOR_SELECT2.unshift({
+                    id: explorationCategoryService.savedMemento,
+                    text: explorationCategoryService.savedMemento
+                  });
+                }
+              }
+
+              $scope.isSavingAllowed = function() {
+                return Boolean(
+                  explorationTitleService.displayed &&
+                  explorationObjectiveService.displayed &&
+                  explorationCategoryService.displayed &&
+                  explorationLanguageCodeService.displayed);
+              };
 
               $scope.save = function() {
-                if ($scope.requireObjectiveToBeSpecified) {
-                  if (!explorationObjectiveService.displayed) {
-                    throw Error('Please specify an objective');
-                  }
-                  explorationObjectiveService.saveDisplayedValue();
+                if (!explorationTitleService.displayed) {
+                  alertsService.addWarning('Please specify a title');
+                  return;
                 }
-                $modalInstance.close();
+                if (!explorationObjectiveService.displayed) {
+                  alertsService.addWarning('Please specify an objective');
+                  return;
+                }
+                if (!explorationCategoryService.displayed) {
+                  alertsService.addWarning('Please specify a category');
+                  return;
+                }
+
+                // Record any fields that have changed.
+                var metadataList = [];
+                if (explorationTitleService.hasChanged()) {
+                  metadataList.push('title');
+                }
+                if (explorationObjectiveService.hasChanged()) {
+                  metadataList.push('objective');
+                }
+                if (explorationCategoryService.hasChanged()) {
+                  metadataList.push('category');
+                }
+                if (explorationLanguageCodeService.hasChanged()) {
+                  metadataList.push('language');
+                }
+                if (explorationTagsService.hasChanged()) {
+                  metadataList.push('tags');
+                }
+
+                // Save all the displayed values.
+                explorationTitleService.saveDisplayedValue();
+                explorationObjectiveService.saveDisplayedValue();
+                explorationCategoryService.saveDisplayedValue();
+                explorationLanguageCodeService.saveDisplayedValue();
+                explorationTagsService.saveDisplayedValue();
+
+                // TODO(sll): Get rid of the $timeout here. It's currently used
+                // because there is a race condition: the saveDisplayedValue()
+                // calls above result in autosave calls. These race with the
+                // discardDraft() call that will be called when the draft
+                // changes entered here are properly saved to the backend.
+                $timeout(function() {
+                  $modalInstance.close(metadataList);
+                }, 500);
               };
 
               $scope.cancel = function() {
@@ -653,8 +791,14 @@ oppia.controller('ExplorationSaveAndPublishButtons', [
               };
             }
           ]
-        }).result.then(function() {
-          saveDraftToBackend('Add an objective.', openPublishExplorationModal);
+        }).result.then(function(metadataList) {
+          if (metadataList.length > 0) {
+            var commitMessage = (
+              'Add metadata: ' + metadataList.join(', ') + '.');
+            saveDraftToBackend(commitMessage, openPublishExplorationModal);
+          } else {
+            openPublishExplorationModal();
+          }
         });
       } else {
         // No further metadata is needed. Open the publish modal immediately.
@@ -701,8 +845,9 @@ oppia.controller('ExplorationSaveAndPublishButtons', [
         version: explorationData.data.version
       }).then(function(response) {
         var data = response.data;
-        if (data.error) {
-          alertsService.addWarning(data.error);
+        if (data.is_version_of_draft_valid === false) {
+          autosaveInfoModalsService.showVersionMismatchModal(
+            changeListService.getChangeList());
           return;
         }
 

@@ -22,6 +22,8 @@ should therefore be independent of the specific storage models used.
 """
 
 import copy
+import re
+import string
 
 import feconf
 import utils
@@ -33,6 +35,7 @@ COLLECTION_PROPERTY_TITLE = 'title'
 COLLECTION_PROPERTY_CATEGORY = 'category'
 COLLECTION_PROPERTY_OBJECTIVE = 'objective'
 COLLECTION_PROPERTY_LANGUAGE_CODE = 'language_code'
+COLLECTION_PROPERTY_TAGS = 'tags'
 COLLECTION_NODE_PROPERTY_PREREQUISITE_SKILLS = 'prerequisite_skills'
 COLLECTION_NODE_PROPERTY_ACQUIRED_SKILLS = 'acquired_skills'
 
@@ -65,7 +68,8 @@ class CollectionChange(object):
 
     COLLECTION_PROPERTIES = (
         COLLECTION_PROPERTY_TITLE, COLLECTION_PROPERTY_CATEGORY,
-        COLLECTION_PROPERTY_OBJECTIVE, COLLECTION_PROPERTY_LANGUAGE_CODE)
+        COLLECTION_PROPERTY_OBJECTIVE, COLLECTION_PROPERTY_LANGUAGE_CODE,
+        COLLECTION_PROPERTY_TAGS)
 
     def __init__(self, change_dict):
         """Initializes an CollectionChange object from a dict.
@@ -257,8 +261,8 @@ class Collection(object):
     """Domain object for an Oppia collection."""
 
     def __init__(self, collection_id, title, category, objective,
-                 language_code, schema_version, nodes, version, created_on=None,
-                 last_updated=None):
+                 language_code, tags, schema_version, nodes, version,
+                 created_on=None, last_updated=None):
         """Constructs a new collection given all the information necessary to
         represent a collection.
 
@@ -279,6 +283,7 @@ class Collection(object):
         self.category = category
         self.objective = objective
         self.language_code = language_code
+        self.tags = tags
         self.schema_version = schema_version
         self.nodes = nodes
         self.version = version
@@ -290,8 +295,9 @@ class Collection(object):
             'id': self.id,
             'title': self.title,
             'category': self.category,
-            'language_code': self.language_code,
             'objective': self.objective,
+            'language_code': self.language_code,
+            'tags': self.tags,
             'schema_version': self.schema_version,
             'nodes': [
                 node.to_dict() for node in self.nodes
@@ -300,10 +306,12 @@ class Collection(object):
 
     @classmethod
     def create_default_collection(
-            cls, collection_id, title, category, objective,
+            cls, collection_id, title=feconf.DEFAULT_COLLECTION_TITLE,
+            category=feconf.DEFAULT_COLLECTION_CATEGORY,
+            objective=feconf.DEFAULT_COLLECTION_OBJECTIVE,
             language_code=feconf.DEFAULT_LANGUAGE_CODE):
         return cls(
-            collection_id, title, category, objective, language_code,
+            collection_id, title, category, objective, language_code, [],
             feconf.CURRENT_COLLECTION_SCHEMA_VERSION, [], 0)
 
     @classmethod
@@ -313,9 +321,9 @@ class Collection(object):
         collection = cls(
             collection_dict['id'], collection_dict['title'],
             collection_dict['category'], collection_dict['objective'],
-            collection_dict['language_code'], collection_dict['schema_version'],
-            [], collection_version, collection_created_on,
-            collection_last_updated)
+            collection_dict['language_code'], collection_dict['tags'],
+            collection_dict['schema_version'], [], collection_version,
+            collection_created_on, collection_last_updated)
 
         for node_dict in collection_dict['nodes']:
             collection.nodes.append(
@@ -337,6 +345,7 @@ class Collection(object):
         """Converts a v1 collection dict into a v2 collection dict."""
         collection_dict['schema_version'] = 2
         collection_dict['language_code'] = feconf.DEFAULT_LANGUAGE_CODE
+        collection_dict['tags'] = []
         return collection_dict
 
     @classmethod
@@ -448,6 +457,9 @@ class Collection(object):
     def update_language_code(self, language_code):
         self.language_code = language_code
 
+    def update_tags(self, tags):
+        self.tags = tags
+
     def _find_node(self, exploration_id):
         for ind, node in enumerate(self.nodes):
             if node.exploration_id == exploration_id:
@@ -487,22 +499,20 @@ class Collection(object):
         if not isinstance(self.title, basestring):
             raise utils.ValidationError(
                 'Expected title to be a string, received %s' % self.title)
-        utils.require_valid_name(self.title, 'the collection title')
+        utils.require_valid_name(
+            self.title, 'the collection title', allow_empty=True)
 
         if not isinstance(self.category, basestring):
             raise utils.ValidationError(
                 'Expected category to be a string, received %s'
                 % self.category)
-        utils.require_valid_name(self.category, 'the collection category')
+        utils.require_valid_name(
+            self.category, 'the collection category', allow_empty=True)
 
         if not isinstance(self.objective, basestring):
             raise utils.ValidationError(
                 'Expected objective to be a string, received %s' %
                 self.objective)
-
-        if not self.objective:
-            raise utils.ValidationError(
-                'An objective must be specified (in the \'Settings\' tab).')
 
         if not isinstance(self.language_code, basestring):
             raise utils.ValidationError(
@@ -517,6 +527,35 @@ class Collection(object):
                     for lc in feconf.ALL_LANGUAGE_CODES]):
             raise utils.ValidationError(
                 'Invalid language code: %s' % self.language_code)
+
+        if not isinstance(self.tags, list):
+            raise utils.ValidationError(
+                'Expected tags to be a list, received %s' % self.tags)
+        for tag in self.tags:
+            if not isinstance(tag, basestring):
+                raise utils.ValidationError(
+                    'Expected each tag to be a string, received \'%s\'' % tag)
+
+            if not tag:
+                raise utils.ValidationError('Tags should be non-empty.')
+
+            if not re.match(feconf.TAG_REGEX, tag):
+                raise utils.ValidationError(
+                    'Tags should only contain lowercase letters and spaces, '
+                    'received \'%s\'' % tag)
+
+            if (tag[0] not in string.ascii_lowercase or
+                    tag[-1] not in string.ascii_lowercase):
+                raise utils.ValidationError(
+                    'Tags should not start or end with whitespace, received '
+                    ' \'%s\'' % tag)
+
+            if re.search(r'\s\s+', tag):
+                raise utils.ValidationError(
+                    'Adjacent whitespace in tags should be collapsed, '
+                    'received \'%s\'' % tag)
+        if len(set(self.tags)) != len(self.tags):
+            raise utils.ValidationError('Some tags duplicate each other')
 
         if not isinstance(self.schema_version, int):
             raise utils.ValidationError(
@@ -544,6 +583,18 @@ class Collection(object):
             node.validate()
 
         if strict:
+            if not self.title:
+                raise utils.ValidationError(
+                    'A title must be specified for the collection.')
+
+            if not self.objective:
+                raise utils.ValidationError(
+                    'An objective must be specified for the collection.')
+
+            if not self.category:
+                raise utils.ValidationError(
+                    'A category must be specified for the collection.')
+
             if not self.nodes:
                 raise utils.ValidationError(
                     'Expected to have at least 1 exploration in the '
@@ -580,14 +631,16 @@ class CollectionSummary(object):
     """Domain object for an Oppia collection summary."""
 
     def __init__(self, collection_id, title, category, objective, language_code,
-                 status, community_owned, owner_ids, editor_ids,
+                 tags, status, community_owned, owner_ids, editor_ids,
                  viewer_ids, contributor_ids, contributors_summary, version,
-                 collection_model_created_on, collection_model_last_updated):
+                 node_count, collection_model_created_on,
+                 collection_model_last_updated):
         self.id = collection_id
         self.title = title
         self.category = category
         self.objective = objective
         self.language_code = language_code
+        self.tags = tags
         self.status = status
         self.community_owned = community_owned
         self.owner_ids = owner_ids
@@ -596,6 +649,7 @@ class CollectionSummary(object):
         self.contributor_ids = contributor_ids
         self.contributors_summary = contributors_summary
         self.version = version
+        self.node_count = node_count
         self.collection_model_created_on = collection_model_created_on
         self.collection_model_last_updated = collection_model_last_updated
 
@@ -606,6 +660,7 @@ class CollectionSummary(object):
             'category': self.category,
             'objective': self.objective,
             'language_code': self.language_code,
+            'tags': self.tags,
             'status': self.status,
             'community_owned': self.community_owned,
             'owner_ids': self.owner_ids,

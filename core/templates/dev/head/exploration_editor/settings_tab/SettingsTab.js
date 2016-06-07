@@ -25,6 +25,7 @@ oppia.controller('SettingsTab', [
   'changeListService', 'alertsService', 'explorationStatesService',
   'explorationParamChangesService', 'explorationWarningsService',
   'CATEGORY_LIST', 'explorationAdvancedFeaturesService',
+  'EXPLORATION_TITLE_INPUT_FOCUS_LABEL',
   function(
       $scope, $http, $window, $modal, $rootScope,
       explorationData, explorationTitleService, explorationCategoryService,
@@ -33,9 +34,12 @@ oppia.controller('SettingsTab', [
       explorationInitStateNameService, explorationParamSpecsService,
       changeListService, alertsService, explorationStatesService,
       explorationParamChangesService, explorationWarningsService,
-      CATEGORY_LIST, explorationAdvancedFeaturesService) {
-    $scope.CATEGORY_LIST_FOR_SELECT2 = [];
+      CATEGORY_LIST, explorationAdvancedFeaturesService,
+      EXPLORATION_TITLE_INPUT_FOCUS_LABEL) {
+    $scope.EXPLORATION_TITLE_INPUT_FOCUS_LABEL = (
+      EXPLORATION_TITLE_INPUT_FOCUS_LABEL);
 
+    $scope.CATEGORY_LIST_FOR_SELECT2 = [];
     for (var i = 0; i < CATEGORY_LIST.length; i++) {
       $scope.CATEGORY_LIST_FOR_SELECT2.push({
         id: CATEGORY_LIST[i],
@@ -47,7 +51,7 @@ oppia.controller('SettingsTab', [
 
     $scope.TAG_REGEX = GLOBALS.TAG_REGEX;
 
-    var MY_EXPLORATIONS_PAGE_URL = '/my_explorations';
+    var DASHBOARD_PAGE_URL = '/dashboard';
     var EXPLORE_PAGE_PREFIX = '/explore/';
 
     $scope.getExplorePageUrl = function() {
@@ -86,8 +90,11 @@ oppia.controller('SettingsTab', [
           }
         );
 
-        if (!categoryIsInSelect2) {
-          $scope.CATEGORY_LIST_FOR_SELECT2.push({
+        // If the current category is not in the dropdown, add it
+        // as the first option.
+        if (!categoryIsInSelect2 &&
+            explorationCategoryService.savedMemento) {
+          $scope.CATEGORY_LIST_FOR_SELECT2.unshift({
             id: explorationCategoryService.savedMemento,
             text: explorationCategoryService.savedMemento
           });
@@ -244,7 +251,7 @@ oppia.controller('SettingsTab', [
           deleteUrl += ('?role=' + role);
         }
         $http['delete'](deleteUrl).then(function() {
-          $window.location = MY_EXPLORATIONS_PAGE_URL;
+          $window.location = DASHBOARD_PAGE_URL;
         });
       });
     };

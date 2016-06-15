@@ -245,6 +245,7 @@ body {
   width: calc(100% - 280px);
 }
 
+
 .oppia-profile-portfolio-container {
   margin: 0 auto;
   margin-bottom: 20px;
@@ -1610,6 +1611,16 @@ pre.oppia-pre-wrapped-text {
   position: relative;
 }
 
+.oppia-state-graph-animate-show {
+  opacity: 1;
+}
+.oppia-state-graph-animate-show.ng-hide-add, .oppia-state-graph-animate-show.ng-hide-remove {
+  transition: all linear 0.5s;
+}
+.oppia-state-graph-animate-show.ng-hide {
+  opacity: 0;
+}
+
 /* Styles for the collections learner view */
 
 .oppia-collection-player-tiles-container {
@@ -2236,7 +2247,7 @@ div#ng-curtain {
       This needs to take i18n of the "Create" and "Sign in" buttons into
       account.
     */
-    min-width: 535px;
+    min-width: 580px;
   }
 }
 .nav > li > a.oppia-navbar-tab {

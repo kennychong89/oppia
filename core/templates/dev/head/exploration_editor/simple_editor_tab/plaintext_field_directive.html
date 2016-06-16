@@ -1,19 +1,47 @@
 <script type="text/ng-template" id="editor/plaintextField">
   <div ng-show="!inEditMode" ng-click="startEditing()"
-       class="view-only">
-    <[displayedValue]>
+       class="view-mode">
+    <span ng-if="displayedValue"><[displayedValue]></span>
+    <span ng-if="!displayedValue" class="placeholder">Type the title of your exploration.</span>
   </div>
 
-  <div ng-show="inEditMode">
+  <div ng-show="inEditMode" class="edit-mode">
     <input type="text" ng-model="displayedValue" ng-blur="finishEditing()"
-           ng-keypress="onKeypress($event)" focus-on="<[focusLabel]>">
+           ng-keypress="onKeypress($event)" focus-on="<[focusLabel]>"
+           placeholder="Type the title of your exploration.">
   </div>
 </script>
 
 <style>
-  plaintext-field .view-only {
-    background-color: #f0f0f0;
-    border-radius: 5px;
-    padding: 10px 20px;
+  plaintext-field {
+    height: 75px;
+    line-height: 75px;
+    vertical-align: middle;
+    width: 100%;
+  }
+
+  plaintext-field .view-mode {
+    background-color: #fafafa;
+    color: rgba(0, 0, 0, 0.87);
+    padding: 0 20px;
+  }
+  plaintext-field .view-mode:hover {
+    background-color: #d6d6d6;
+    color: #444;
+  }
+  plaintext-field .view-mode .placeholder {
+    color: rgba(0, 0, 0, 0.5);
+  }
+
+  plaintext-field .edit-mode {
+    border-bottom: 2px solid #66bb6a;
+    color: #444;
+    padding: 0 20px;
+  }
+  plaintext-field .edit-mode input {
+    border: none;
+    margin: 0;
+    outline: 0;
+    width: 100%;
   }
 </style>

@@ -151,6 +151,7 @@ oppia.directive('simpleEditorTab', [function() {
             sidebarLabel: 'Title',
             indentSidebarLabel: false,
             isPrefilled: false,
+            enabled: false,
             getInitDisplayedValue: function() {
               return explorationTitleService.displayed;
             },
@@ -168,6 +169,7 @@ oppia.directive('simpleEditorTab', [function() {
             sidebarLabel: 'Introduction',
             indentSidebarLabel: false,
             isPrefilled: false,
+            enabled: false,
             getInitDisplayedValue: function() {
               return explorationStatesService.getStateContentMemento(
                 'Introduction')[0].value;
@@ -191,6 +193,7 @@ oppia.directive('simpleEditorTab', [function() {
             sidebarLabel: 'Question 1',
             indentSidebarLabel: false,
             isPrefilled: false,
+            enabled: false,
             getInitDisplayedValue: function() {
               return explorationStatesService.getStateContentMemento(
                 'Question 1')[0].value;
@@ -214,6 +217,7 @@ oppia.directive('simpleEditorTab', [function() {
             sidebarLabel: null,
             indentSidebarLabel: null,
             isPrefilled: true,
+            enabled: false,
             getInitDisplayedValue: function() {
               return explorationStatesService.getInteractionIdMemento(
                 'Question 1');
@@ -235,6 +239,7 @@ oppia.directive('simpleEditorTab', [function() {
             sidebarLabel: 'Prompt',
             indentSidebarLabel: true,
             isPrefilled: false,
+            enabled: false,
             getInitDisplayedValue: function() {
               return explorationStatesService.getInteractionCustomizationArgs(
                 'Question 1');
@@ -253,6 +258,7 @@ oppia.directive('simpleEditorTab', [function() {
             sidebarLabel: 'Correct Answer',
             indentSidebarLabel: true,
             isPrefilled: false,
+            enabled: false,
             getInitDisplayedValue: function() {
             },
             isFilledOut: function() {
@@ -266,6 +272,7 @@ oppia.directive('simpleEditorTab', [function() {
             sidebarLabel: 'Hint',
             indentSidebarLabel: true,
             isPrefilled: false,
+            enabled: false,
             getInitDisplayedValue: function() {
             },
             isFilledOut: function() {
@@ -273,6 +280,11 @@ oppia.directive('simpleEditorTab', [function() {
             save: function() {
             }
           }];
+
+          // TODO(sll): Generalize this so that it enables more fields
+          // depending on what the creator has filled out previously. The code
+          // below handles only the "new exploration" case.
+          $scope.fields[0].enabled = true;
 
           // Give the page a little while to load, then scroll so that the first
           // element is in focus.

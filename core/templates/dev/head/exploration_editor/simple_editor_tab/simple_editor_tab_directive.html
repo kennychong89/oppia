@@ -4,11 +4,16 @@
       <ul>
         <li class="sidebar-item" ng-repeat="field in fields track by $index"
             ng-class="{'sidebar-item-indented': field.indentSidebarLabel}">
-          <a ng-if="scrollSpyIsActive" du-smooth-scroll="<[field.id]>"
-             du-scrollspy ng-attr-offset="<[defaultScrollOffset]>">
+          <span ng-if="field.enabled">
+            <a ng-if="scrollSpyIsActive" du-smooth-scroll="<[field.id]>"
+               du-scrollspy ng-attr-offset="<[defaultScrollOffset]>">
+              <[field.sidebarLabel]>
+            </a>
+            <a ng-if="!scrollSpyIsActive"><[field.sidebarLabel]></a>
+          </span>
+          <span ng-if="!field.enabled" class="sidebar-item-disabled">
             <[field.sidebarLabel]>
-          </a>
-          <a ng-if="!scrollSpyIsActive"><[field.sidebarLabel]></a>
+          </span>
         </li>
       </ul>
 
@@ -22,7 +27,7 @@
         <div style="height: <[defaultScrollOffset]>px;">
         </div>
 
-        <div ng-repeat="field in fields track by $index" ng-show="$index <= getLastSeenFieldIndex() || ($index === getLastSeenFieldIndex() + 1 && fields[$index - 1].isFilledOut())">
+        <div ng-repeat="field in fields track by $index" ng-show="field.enabled">
           <div class="header" id="<[field.id]>">
             <[field.header]>
           </div>
@@ -83,6 +88,9 @@
   simple-editor-tab .sidebar a {
     color: #333;
   }
+  simple-editor-tab .sidebar .sidebar-item-disabled {
+    color: #ccc;
+  }
 
   simple-editor-tab .full-editor-btn {
     margin-top: 50px;
@@ -107,6 +115,7 @@
     width: calc(100% - 40px);
   }
   simple-editor-tab .main .content .header {
+    color: #000;
     font-weight: bold;
     margin-bottom: 40px;
     margin-top: 80px;

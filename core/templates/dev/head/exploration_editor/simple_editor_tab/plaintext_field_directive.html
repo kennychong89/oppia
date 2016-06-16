@@ -3,6 +3,7 @@
        class="view-mode">
     <span ng-if="displayedValue"><[displayedValue]></span>
     <span ng-if="!displayedValue" class="placeholder">Type the title of your exploration.</span>
+    <i class="material-icons edit-icon" title="Edit Title">&#xE254;</i>
   </div>
 
   <div ng-show="inEditMode" class="edit-mode">
@@ -16,6 +17,7 @@
   plaintext-field {
     height: 75px;
     line-height: 75px;
+    position: relative;
     vertical-align: middle;
     width: 100%;
   }
@@ -24,6 +26,7 @@
     background-color: #fafafa;
     color: rgba(0, 0, 0, 0.87);
     padding: 0 20px;
+    position: relative;
   }
   plaintext-field .view-mode:hover {
     background-color: #d6d6d6;
@@ -31,6 +34,16 @@
   }
   plaintext-field .view-mode .placeholder {
     color: rgba(0, 0, 0, 0.5);
+  }
+  plaintext-field .view-mode .edit-icon {
+    font-size: 18px;
+    opacity: 0;
+    position: absolute;
+    right: 20px;
+    top: 25px;
+  }
+  plaintext-field .view-mode:hover .edit-icon {
+    opacity: 1.0;
   }
 
   plaintext-field .edit-mode {

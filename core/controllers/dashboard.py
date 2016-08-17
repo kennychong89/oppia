@@ -25,6 +25,7 @@ from core.domain import config_domain
 from core.domain import exp_domain
 from core.domain import exp_services
 from core.domain import feedback_services
+from core.domain import stats_services
 from core.domain import subscription_services
 from core.domain import summary_services
 from core.domain import user_jobs_continuous
@@ -34,6 +35,15 @@ import utils
 
 EXPLORATION_ID_KEY = 'explorationId'
 COLLECTION_ID_KEY = 'collectionId'
+
+DEFAULT_TWITTER_SHARE_MESSAGE_DASHBOARD = config_domain.ConfigProperty(
+    'default_twitter_share_message_dashboard', {
+        'type': 'unicode',
+    },
+    'Default text for the Twitter share message for the dashboard',
+    default_value=(
+        'Check out this interactive lesson I created on Oppia - a free '
+        'platform for teaching and learning!'))
 
 
 class NotificationsDashboardPage(base.BaseHandler):
@@ -59,8 +69,6 @@ class NotificationsDashboardPage(base.BaseHandler):
 
 class NotificationsDashboardHandler(base.BaseHandler):
     """Provides data for the user notifications dashboard."""
-
-    PAGE_NAME_FOR_CSRF = 'dashboard'
 
     def get(self):
         """Handles GET requests."""
@@ -108,9 +116,6 @@ class NotificationsDashboardHandler(base.BaseHandler):
 class DashboardPage(base.BaseHandler):
     """Page showing the user's creator dashboard."""
 
-    PAGE_NAME_FOR_CSRF = 'dashboard'
-    PAGE_HAS_CREATE_EXP_REQUEST = True
-
     @base.require_user
     def get(self):
         if self.username in config_domain.BANNED_USERNAMES.value:
@@ -119,11 +124,9 @@ class DashboardPage(base.BaseHandler):
         elif user_services.has_fully_registered(self.user_id):
             self.values.update({
                 'nav_mode': feconf.NAV_MODE_DASHBOARD,
-                'can_create_collections': (
-                    self.username in
-                    config_domain.WHITELISTED_COLLECTION_EDITOR_USERNAMES.value
-                ),
                 'allow_yaml_file_upload': feconf.ALLOW_YAML_FILE_UPLOAD,
+                'DEFAULT_TWITTER_SHARE_MESSAGE_DASHBOARD': (
+                    DEFAULT_TWITTER_SHARE_MESSAGE_DASHBOARD.value)
             })
             self.render_template(
                 'dashboard/dashboard.html', redirect_url_on_logout='/')
@@ -146,43 +149,53 @@ class DashboardHandler(base.BaseHandler):
                 category in feconf.CATEGORIES_TO_COLORS else
                 feconf.DEFAULT_COLOR)
 
+        def _round_average_ratings(rating):
+            return round(rating, feconf.AVERAGE_RATINGS_DASHBOARD_PRECISION)
+
         exploration_ids_subscribed_to = (
             subscription_services.get_exploration_ids_subscribed_to(
                 self.user_id))
 
-        subscribed_exploration_summaries = (
+        subscribed_exploration_summaries = filter(None, (
             exp_services.get_exploration_summaries_matching_ids(
-                exploration_ids_subscribed_to))
-        subscribed_collection_summaries = (
+                exploration_ids_subscribed_to)))
+        subscribed_collection_summaries = filter(None, (
             collection_services.get_collection_summaries_matching_ids(
                 subscription_services.get_collection_ids_subscribed_to(
-                    self.user_id)))
+                    self.user_id))))
 
-        explorations_list = summary_services.get_displayable_exp_summary_dicts(
+        exp_summary_list = summary_services.get_displayable_exp_summary_dicts(
             subscribed_exploration_summaries)
-        collections_list = []
+        collection_summary_list = []
 
         feedback_thread_analytics = (
             feedback_services.get_thread_analytics_multi(
                 exploration_ids_subscribed_to))
 
-        for ind, exploration in enumerate(explorations_list):
-            exploration.update(feedback_thread_analytics[ind].to_dict())
+        unresolved_answers_dict = (
+            stats_services.get_exps_unresolved_answers_count_for_default_rule(
+                exploration_ids_subscribed_to))
 
-        explorations_list = sorted(
-            explorations_list,
+        for ind, exploration in enumerate(exp_summary_list):
+            exploration.update(feedback_thread_analytics[ind].to_dict())
+            exploration.update({
+                'num_unresolved_answers': (
+                    unresolved_answers_dict[exploration['id']]
+                    if exploration['id'] in unresolved_answers_dict else 0
+                )
+            })
+
+        exp_summary_list = sorted(
+            exp_summary_list,
             key=lambda x: (x['num_open_threads'], x['last_updated_msec']),
             reverse=True)
 
         if (self.username in
                 config_domain.WHITELISTED_COLLECTION_EDITOR_USERNAMES.value):
             for collection_summary in subscribed_collection_summaries:
-                if collection_summary is None:
-                    continue
-
                 # TODO(sll): Reuse _get_displayable_collection_summary_dicts()
                 # in summary_services, instead of replicating it like this.
-                collections_list.append({
+                collection_summary_list.append({
                     'id': collection_summary.id,
                     'title': collection_summary.title,
                     'category': collection_summary.category,
@@ -201,11 +214,28 @@ class DashboardHandler(base.BaseHandler):
                         collection_summary.category),
                 })
 
+        dashboard_stats = (
+            user_jobs_continuous.UserStatsAggregator.get_dashboard_stats(
+                self.user_id))
+        dashboard_stats.update({
+            'total_open_feedback': feedback_services.get_total_open_threads(
+                feedback_thread_analytics)
+        })
+        if dashboard_stats and dashboard_stats.get('average_ratings'):
+            dashboard_stats['average_ratings'] = (
+                _round_average_ratings(dashboard_stats['average_ratings']))
+
+        last_week_stats = (
+            user_services.get_last_week_dashboard_stats(self.user_id))
+        if last_week_stats and last_week_stats.get('average_ratings'):
+            last_week_stats['average_ratings'] = (
+                _round_average_ratings(last_week_stats['average_ratings']))
+
         self.values.update({
-            'explorations_list': explorations_list,
-            'collections_list': collections_list,
-            'dashboard_stats': user_services.get_user_dashboard_stats(
-                self.user_id)
+            'explorations_list': exp_summary_list,
+            'collections_list': collection_summary_list,
+            'dashboard_stats': dashboard_stats,
+            'last_week_stats': last_week_stats
         })
         self.render_json(self.values)
 
@@ -235,8 +265,6 @@ class NotificationsHandler(base.BaseHandler):
 
 class NewExploration(base.BaseHandler):
     """Creates a new exploration."""
-
-    PAGE_NAME_FOR_CSRF = feconf.CSRF_PAGE_NAME_CREATE_EXPLORATION
 
     @base.require_fully_signed_up
     def post(self):
@@ -271,8 +299,6 @@ class NewExploration(base.BaseHandler):
 class NewCollection(base.BaseHandler):
     """Creates a new collection."""
 
-    PAGE_NAME_FOR_CSRF = 'dashboard'
-
     @base.require_fully_signed_up
     def post(self):
         """Handles POST requests."""
@@ -288,8 +314,6 @@ class NewCollection(base.BaseHandler):
 
 class UploadExploration(base.BaseHandler):
     """Uploads a new exploration."""
-
-    PAGE_NAME_FOR_CSRF = 'dashboard'
 
     @base.require_fully_signed_up
     def post(self):

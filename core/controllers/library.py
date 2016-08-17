@@ -34,11 +34,18 @@ current_user_services = models.Registry.import_current_user_services()
 
 def get_matching_activity_dicts(query_string, search_cursor):
     """Given a query string and a search cursor, returns a list of activity
-       dicts that satisfy the search query.
+    dicts that satisfy the search query.
     """
-    collection_ids, search_cursor = (
-        collection_services.get_collection_ids_matching_query(
-            query_string, cursor=search_cursor))
+    # We only populate collections in the initial load, since the current
+    # frontend search infrastructure is set up to only deal with one search
+    # cursor at a time.
+    # TODO(sll): Remove this special casing.
+    collection_ids = []
+    if not search_cursor:
+        collection_ids, _ = (
+            collection_services.get_collection_ids_matching_query(
+                query_string))
+
     exp_ids, new_search_cursor = (
         exp_services.get_exploration_ids_matching_query(
             query_string, cursor=search_cursor))
@@ -62,8 +69,6 @@ class LibraryPage(base.BaseHandler):
     """The main library page. Used for both the default list of categories and
     for search results.
     """
-
-    PAGE_NAME_FOR_CSRF = 'library'
 
     def get(self):
         """Handles GET requests."""
@@ -99,7 +104,7 @@ class LibraryIndexHandler(base.BaseHandler):
             summary_services.get_top_rated_exploration_summary_dicts(
                 [feconf.DEFAULT_LANGUAGE_CODE]))
         featured_activity_summary_dicts = (
-            summary_services.get_featured_exploration_summary_dicts(
+            summary_services.get_featured_activity_summary_dicts(
                 [feconf.DEFAULT_LANGUAGE_CODE]))
 
         preferred_language_codes = [feconf.DEFAULT_LANGUAGE_CODE]
@@ -123,7 +128,7 @@ class LibraryIndexHandler(base.BaseHandler):
             summary_dicts_by_category.insert(0, {
                 'activity_summary_dicts': featured_activity_summary_dicts,
                 'categories': [],
-                'header': feconf.LIBRARY_CATEGORY_FEATURED_EXPLORATIONS,
+                'header': feconf.LIBRARY_CATEGORY_FEATURED_ACTIVITIES,
             })
 
         self.values.update({

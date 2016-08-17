@@ -116,8 +116,7 @@ class EditorTest(BaseEditorControllerTest):
 
         response = self.testapp.get(feconf.DASHBOARD_URL)
         self.assertEqual(response.status_int, 200)
-        csrf_token = self.get_csrf_token_from_response(
-            response, token_type=feconf.CSRF_PAGE_NAME_CREATE_EXPLORATION)
+        csrf_token = self.get_csrf_token_from_response(response)
         exp_id = self.post_json(
             feconf.NEW_EXPLORATION_URL, {}, csrf_token
         )[dashboard.EXPLORATION_ID_KEY]
@@ -343,7 +342,7 @@ class EditorTest(BaseEditorControllerTest):
             response_dict = self.get_json(url)
             self.assertEqual(
                 response_dict['unhandled_answers'],
-                _create_training_data('sad', 'joyful'))
+                _create_training_data('joyful', 'sad'))
 
             # If the confirmed unclassified answers is trained for one of the
             # values, it should no longer show up in unhandled answers.
@@ -599,8 +598,7 @@ param_changes: []
 
         self.logout()
 
-    def test_state_download_handler_for_default_exploration(self):
-
+    def test_state_yaml_handler(self):
         self.login(self.EDITOR_EMAIL)
         owner_id = self.get_user_id_from_email(self.EDITOR_EMAIL)
 
@@ -614,22 +612,18 @@ param_changes: []
         exploration = exp_services.get_exploration_by_id(exp_id)
         exploration.add_states(['State A', 'State 2', 'State 3'])
         exploration.states['State A'].update_interaction_id('TextInput')
-        exploration.states['State 2'].update_interaction_id('TextInput')
-        exploration.states['State 3'].update_interaction_id('TextInput')
-        exploration.rename_state('State 2', 'State B')
-        exploration.delete_state('State 3')
-        exp_services._save_exploration(  # pylint: disable=protected-access
-            owner_id, exploration, '', [])
-        response = self.testapp.get('/create/%s' % exp_id)
 
-        # Check download state as YAML string
-        self.maxDiff = None
-        state_name = 'State%20A'
-        download_url = (
-            '/createhandler/download_state/%s?state=%s&width=50' %
-            (exp_id, state_name))
-        response = self.testapp.get(download_url)
-        self.assertEqual(self.SAMPLE_STATE_STRING, response.body)
+
+        response = self.testapp.get(
+            '%s/%s' % (feconf.EDITOR_URL_PREFIX, exp_id))
+        csrf_token = self.get_csrf_token_from_response(response)
+        response = self.post_json('/createhandler/state_yaml', {
+            'state_dict': exploration.states['State A'].to_dict(),
+            'width': 50,
+        }, csrf_token=csrf_token)
+        self.assertEqual({
+            'yaml': self.SAMPLE_STATE_STRING
+        }, response)
 
         self.logout()
 
@@ -1055,7 +1049,7 @@ class ModeratorEmailsTest(test_utils.GenericTestBase):
         with self.swap(
             feconf, 'REQUIRE_EMAIL_ON_MODERATOR_ACTION', True
             ), self.swap(
-                feconf, 'CAN_SEND_EMAILS_TO_USERS', False):
+                feconf, 'CAN_SEND_EMAILS', False):
             # Log in as a moderator.
             self.login(self.MODERATOR_EMAIL)
 
@@ -1108,7 +1102,7 @@ class ModeratorEmailsTest(test_utils.GenericTestBase):
                 valid_payload, csrf_token, expect_errors=True,
                 expected_status_int=500)
 
-            with self.swap(feconf, 'CAN_SEND_EMAILS_TO_USERS', True):
+            with self.swap(feconf, 'CAN_SEND_EMAILS', True):
                 # Now the email gets sent with no error.
                 self.put_json(
                     '/createhandler/moderatorrights/%s' % self.EXP_ID,
@@ -1121,7 +1115,7 @@ class ModeratorEmailsTest(test_utils.GenericTestBase):
         with self.swap(
             feconf, 'REQUIRE_EMAIL_ON_MODERATOR_ACTION', True
             ), self.swap(
-                feconf, 'CAN_SEND_EMAILS_TO_USERS', True):
+                feconf, 'CAN_SEND_EMAILS', True):
             # Log in as a moderator.
             self.login(self.MODERATOR_EMAIL)
 
@@ -1183,7 +1177,7 @@ class ModeratorEmailsTest(test_utils.GenericTestBase):
         with self.swap(
             feconf, 'REQUIRE_EMAIL_ON_MODERATOR_ACTION', True
             ), self.swap(
-                feconf, 'CAN_SEND_EMAILS_TO_USERS', True):
+                feconf, 'CAN_SEND_EMAILS', True):
             # Log in as a moderator.
             self.login(self.MODERATOR_EMAIL)
 
@@ -1245,7 +1239,7 @@ class ModeratorEmailsTest(test_utils.GenericTestBase):
         with self.swap(
             feconf, 'REQUIRE_EMAIL_ON_MODERATOR_ACTION', True
             ), self.swap(
-                feconf, 'CAN_SEND_EMAILS_TO_USERS', True):
+                feconf, 'CAN_SEND_EMAILS', True):
             # Log in as a non-moderator.
             self.login(self.EDITOR_EMAIL)
 

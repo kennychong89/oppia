@@ -57,7 +57,7 @@ exports.config = {
   // with --suite=smoke, only the patterns matched by that suite will run.
   suites: {
     full: [
-      'protractor/*.js',
+      'protractor/*.js'
     ],
 
     mainEditor: [
@@ -85,7 +85,8 @@ exports.config = {
     misc: [
       'protractor/userManagement.js',
       'protractor/embedding.js',
-      'protractor/preferences.js'
+      'protractor/preferences.js',
+      'protractor/cacheSlugs.js'
     ],
 
     i18n: [
@@ -165,7 +166,7 @@ exports.config = {
 
     // Set a wide enough window size for the navbar in the library pages to
     // display fully.
-    browser.driver.manage().window().setSize(1200, 1000);
+    browser.driver.manage().window().setSize(1240, 1000);
   },
 
   // The params object will be passed directly to the protractor instance,

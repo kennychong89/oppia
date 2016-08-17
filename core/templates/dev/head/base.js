@@ -25,14 +25,14 @@ oppia.constant('PLACEHOLDER_OUTCOME_DEST', '/');
 
 oppia.constant('DEFAULT_RULE_NAME', 'Default');
 
-oppia.constant('CLASSIFIER_RULESPEC_STR', 'ClassifyMatches');
+oppia.constant('CLASSIFIER_RULESPEC_STR', 'FuzzyMatches');
 
 // Feature still in development.
 // NOTE TO DEVELOPERS: This should be synchronized with the value in feconf.
 oppia.constant('ENABLE_STRING_CLASSIFIER', false);
 
 oppia.constant('DEFAULT_CLASSIFIER_RULE_SPEC', {
-  rule_type: 'ClassifyMatches',
+  rule_type: 'FuzzyMatches',
   inputs: {
     training_data: []
   }
@@ -55,15 +55,19 @@ oppia.constant('MAX_NODES_PER_ROW', 4);
 // in characters, for the name of each node label in the state graph.
 oppia.constant('MAX_NODE_LABEL_LENGTH', 15);
 
+// If an $http request fails with the following error codes, a warning is
+// displayed using alertsService.
+oppia.constant('FATAL_ERROR_CODES', [400, 401, 404, 500]);
+
 // Global utility methods.
 oppia.controller('Base', [
   '$scope', '$http', '$rootScope', '$window', '$timeout', '$document', '$log',
   'alertsService', 'LABEL_FOR_CLEARING_FOCUS', 'siteAnalyticsService',
-  'windowDimensionsService',
+  'windowDimensionsService', 'UrlInterpolationService',
   function(
       $scope, $http, $rootScope, $window, $timeout, $document, $log,
       alertsService, LABEL_FOR_CLEARING_FOCUS, siteAnalyticsService,
-      windowDimensionsService) {
+      windowDimensionsService, UrlInterpolationService) {
     $rootScope.DEV_MODE = GLOBALS.DEV_MODE;
 
     $scope.alertsService = alertsService;
@@ -87,6 +91,8 @@ oppia.controller('Base', [
         }
       });
     }
+
+    $scope.getStaticImageUrl = UrlInterpolationService.getStaticImageUrl;
 
     // This method is here because the trigger for the tutorial is in the site
     // navbar. It broadcasts an event to tell the exploration editor to open the
@@ -155,6 +161,24 @@ oppia.controller('Base', [
 
     $scope.windowIsNarrow = (
       windowDimensionsService.getWidth() <= navbarCutoffWidthPx);
+
+    $scope.openSidebarOnSwipe = function() {
+      if ($scope.windowIsNarrow) {
+        if (!$scope.sidebarIsShown) {
+          $scope.sidebarIsShown = true;
+          $scope.pendingSidebarClick = true;
+        }
+      }
+    };
+
+    $scope.closeSidebarOnSwipe = function() {
+      if ($scope.windowIsNarrow) {
+        if ($scope.sidebarIsShown) {
+          $scope.sidebarIsShown = false;
+          $scope.pendingSidebarClick = false;
+        }
+      }
+    };
 
     windowDimensionsService.registerOnResizeHook(function() {
       $scope.windowIsNarrow = (

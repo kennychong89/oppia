@@ -188,7 +188,12 @@ oppia.factory('ExplorationDiffService', [
           } else if (
               change.cmd !== 'migrate_states_schema_to_latest_version' &&
               change.cmd !== 'AUTO_revert_version_number' &&
-              change.cmd !== 'edit_exploration_property') {
+              change.cmd !== 'edit_exploration_property' &&
+              change.cmd !== 'add_gadget' &&
+              change.cmd !== 'rename_gadget' &&
+              change.cmd !== 'delete_gadget' &&
+              change.cmd !== 'edit_gadget_property') {
+            // TODO(wxy): add a visualization for gadgets.
             throw new Error('Invalid change command: ' + change.cmd);
           }
         });
@@ -250,26 +255,13 @@ oppia.factory('ExplorationDiffService', [
 
       for (var i = 1; i <= _maxId; i++) {
         for (var j = 1; j <= _maxId; j++) {
-          if (i === j) {
-            continue;
-          }
-          if (adjMatrixV1[i][j] && adjMatrixV2[i][j]) {
+          if (i !== j && (adjMatrixV1[i][j] || adjMatrixV2[i][j])) {
             links.push({
               source: i,
               target: j,
-              linkProperty: 'unchanged'
-            });
-          } else if (!adjMatrixV1[i][j] && adjMatrixV2[i][j]) {
-            links.push({
-              source: i,
-              target: j,
-              linkProperty: 'added'
-            });
-          } else if (adjMatrixV1[i][j] && !adjMatrixV2[i][j]) {
-            links.push({
-              source: i,
-              target: j,
-              linkProperty: 'deleted'
+              linkProperty: (
+                adjMatrixV1[i][j] && adjMatrixV2[i][j] ? 'unchanged' :
+                !adjMatrixV1[i][j] && adjMatrixV2[i][j] ? 'added' : 'deleted')
             });
           }
         }

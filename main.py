@@ -150,13 +150,17 @@ URLS = MAPREDUCE_HANDLERS + [
         r'/participate', pages.TeachRedirectPage, 'teach_redirect_page_1'),
     get_redirect_route(
         r'/site_guidelines', pages.TeachRedirectPage, 'teach_redirect_page_2'),
+    get_redirect_route(
+        r'/console_errors', pages.ConsoleErrorPage, 'console_errors'),
     get_redirect_route(r'/contact', pages.ContactPage, 'contact_page'),
 
     get_redirect_route(r'/forum', pages.ForumPage, 'forum_page'),
+    get_redirect_route(r'/donate', pages.DonatePage, 'donate_page'),
+    get_redirect_route(r'/thanks', pages.ThanksPage, 'thanks_page'),
     get_redirect_route(r'/terms', pages.TermsPage, 'terms_page'),
     get_redirect_route(r'/privacy', pages.PrivacyPage, 'privacy_page'),
 
-    get_redirect_route(r'/admin', admin.AdminPage, 'admin_page'),
+    get_redirect_route(r'%s' % feconf.ADMIN_URL, admin.AdminPage, 'admin_page'),
     get_redirect_route(r'/adminhandler', admin.AdminHandler, 'admin_handler'),
     get_redirect_route(
         r'/adminjoboutput', admin.AdminJobOutput, 'admin_job_output'),
@@ -263,6 +267,9 @@ URLS = MAPREDUCE_HANDLERS + [
     get_redirect_route(
         r'/moderator', moderator.ModeratorPage, 'moderator_page'),
     get_redirect_route(
+        r'/moderatorhandler/featured', moderator.FeaturedActivitiesHandler,
+        'moderator_featured_activities'),
+    get_redirect_route(
         r'/moderatorhandler/email_draft/<action>',
         moderator.EmailDraftHandler, 'moderator_action_email_draft'),
 
@@ -308,14 +315,8 @@ URLS = MAPREDUCE_HANDLERS + [
         r'/createhandler/data/<exploration_id>', editor.ExplorationHandler,
         'editor_exploration_handler'),
     get_redirect_route(
-        r'/createhandler/change_list_summary/<exploration_id>',
-        editor.ChangeListSummaryHandler, 'change_list_summary'),
-    get_redirect_route(
         r'/createhandler/download/<exploration_id>',
         editor.ExplorationDownloadHandler, 'exploration_download_handler'),
-    get_redirect_route(
-        r'/createhandler/download_state/<exploration_id>',
-        editor.StateDownloadHandler, 'state_download_handler'),
     get_redirect_route(
         r'/createhandler/imageupload/<exploration_id>',
         editor.ImageUploadHandler, 'image_upload_handler'),
@@ -323,6 +324,9 @@ URLS = MAPREDUCE_HANDLERS + [
         r'/createhandler/resolved_answers/<exploration_id>/' +
         r'<escaped_state_name>',
         editor.ResolvedAnswersHandler, 'resolved_answers_handler'),
+    get_redirect_route(
+        r'/createhandler/state_yaml', editor.StateYamlHandler,
+        'state_yaml_handler'),
     get_redirect_route(
         r'/createhandler/training_data/<exploration_id>/<escaped_state_name>',
         editor.UntrainedAnswersHandler, 'training_data_handler'),
@@ -369,8 +373,8 @@ URLS = MAPREDUCE_HANDLERS + [
         'recent_feedback_messages_handler'),
 
     get_redirect_route(
-        r'%s' % feconf.FEEDBACK_MESSAGE_EMAIL_HANDLER_URL,
-        feedback.UnsentFeedbackEmailHandler, 'feedback_message_email_handler'),
+        r'%s' % feconf.FEEDBACK_THREAD_VIEW_EVENT_URL,
+        feedback.FeedbackThreadViewEventHandler, 'feedback_thread_view_event'),
     get_redirect_route(
         r'%s/<exploration_id>' % feconf.FEEDBACK_THREADLIST_URL_PREFIX,
         feedback.ThreadListHandler, 'feedback_threadlist_handler'),

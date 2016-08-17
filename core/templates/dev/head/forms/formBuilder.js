@@ -905,7 +905,8 @@ oppia.directive('textAngularRte', [
         },
         template: (
           '<div text-angular="" ta-toolbar="<[toolbarOptionsJson]>" ' +
-          '     ta-paste="stripFormatting($html)" ng-model="tempContent" ' +
+          '     ta-paste="stripFormatting($html)" ng-model="tempContent"' +
+          '     placeholder="<[placeholderText]>"' +
           '     name="<[labelForFocusTarget()]>">' +
           '</div>'),
         controller: ['$scope', function($scope) {
@@ -926,6 +927,10 @@ oppia.directive('textAngularRte', [
               });
             }
           });
+
+          if ($scope.uiConfig() && $scope.uiConfig().placeholder) {
+            $scope.placeholderText = $scope.uiConfig().placeholder;
+          }
 
           rteHelperService.getRichTextComponents().forEach(
             function(componentDefn) {

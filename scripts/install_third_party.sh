@@ -137,11 +137,11 @@ if [ ! -d "$TOOLS_DIR/selenium-2.53.2" ]; then
   pip install selenium==2.53.2 --target="$TOOLS_DIR/selenium-2.53.2"
 fi
 
-echo Checking if xvfbwrapper is installed in $TOOLS_DIR/pip_packages
-if [ ! -d "$TOOLS_DIR/xvfbwrapper-0.2.8" ]; then
-  echo Installing xvfbwrapper
+echo Checking if requests is installed in $TOOLS_DIR/pip_packages
+if [ ! -d "$TOOLS_DIR/requests-2.10.0" ]; then
+  echo Installing requests
 
-  pip install xvfbwrapper==0.2.8 --target="$TOOLS_DIR/xvfbwrapper-0.2.8"
+  pip install requests==2.10.0 --target="$TOOLS_DIR/requests-2.10.0"
 fi
 
 # install pre-push script

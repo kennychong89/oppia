@@ -20,11 +20,13 @@ oppia.controller('StateEditor', [
   '$scope', '$rootScope', 'editorContextService', 'changeListService',
   'editabilityService', 'explorationStatesService', 'INTERACTION_SPECS',
   'explorationInitStateNameService', 'explorationAdvancedFeaturesService',
+  'UrlInterpolationService', 'editorFirstTimeEventsService',
   'EditorModeService',
   function(
       $scope, $rootScope, editorContextService, changeListService,
       editabilityService, explorationStatesService, INTERACTION_SPECS,
       explorationInitStateNameService, explorationAdvancedFeaturesService,
+      UrlInterpolationService, editorFirstTimeEventsService,
       EditorModeService) {
     $scope.STATE_CONTENT_SCHEMA = {
       type: 'html'
@@ -38,6 +40,9 @@ oppia.controller('StateEditor', [
     $scope.isCurrentStateTerminal = false;
     $scope.isInteractionIdSet = false;
     $scope.isInteractionShown = false;
+
+    $scope.oppiaBlackImgUrl = UrlInterpolationService.getStaticImageUrl(
+      '/avatar/oppia_black_72px.png');
 
     $scope.isCurrentStateInitialState = function() {
       return (
@@ -96,6 +101,7 @@ oppia.controller('StateEditor', [
 
     $scope.openStateContentEditor = function() {
       if (editabilityService.isEditable()) {
+        editorFirstTimeEventsService.registerFirstOpenContentBoxEvent();
         $scope.contentEditorIsOpen = true;
       }
     };
@@ -107,6 +113,7 @@ oppia.controller('StateEditor', [
     };
 
     $scope.onSaveContentButtonClicked = function() {
+      editorFirstTimeEventsService.registerFirstSaveContentEvent();
       $scope.saveTextContent();
       // Show the interaction when the text content is saved, even if no content
       // is entered.

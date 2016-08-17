@@ -31,10 +31,12 @@ oppia.directive('simpleEditorTab', [function() {
       '$scope', '$document', '$rootScope', '$anchorScroll', '$window',
       '$timeout', 'EditorModeService', 'explorationTitleService',
       'duScrollDuration', 'explorationStatesService',
+      'explorationInitStateNameService',
       function(
           $scope, $document, $rootScope, $anchorScroll, $window,
           $timeout, EditorModeService, explorationTitleService,
-          duScrollDuration, explorationStatesService) {
+          duScrollDuration, explorationStatesService,
+          explorationInitStateNameService) {
         $scope.setEditorModeToFull = EditorModeService.setModeToFull;
         $scope.explorationTitleService = explorationTitleService;
         $scope.fields = [];
@@ -151,7 +153,6 @@ oppia.directive('simpleEditorTab', [function() {
             sidebarLabel: 'Title',
             indentSidebarLabel: false,
             isPrefilled: false,
-            enabled: false,
             getInitDisplayedValue: function() {
               return explorationTitleService.displayed;
             },
@@ -161,6 +162,12 @@ oppia.directive('simpleEditorTab', [function() {
             save: function(newValue) {
               explorationTitleService.displayed = newValue;
               explorationTitleService.saveDisplayedValue();
+              // TODO(sll): call a generic "recompute numElementsToShow"
+              // function, instead.
+              if (explorationTitleService.savedMemento) {
+                $scope.numElementsToShow = Math.max(
+                  $scope.numElementsToShow, 2);
+              }
             }
           }, {
             id: 'introId',
@@ -169,14 +176,13 @@ oppia.directive('simpleEditorTab', [function() {
             sidebarLabel: 'Introduction',
             indentSidebarLabel: false,
             isPrefilled: false,
-            enabled: false,
             getInitDisplayedValue: function() {
               return explorationStatesService.getStateContentMemento(
-                'Introduction')[0].value;
+                explorationInitStateNameService.savedMemento)[0].value;
             },
             isFilledOut: function() {
               return !!explorationStatesService.getStateContentMemento(
-                'Introduction')[0].value;
+                explorationInitStateNameService.savedMemento)[0].value;
             },
             save: function(newValue) {
               explorationStatesService.saveStateContent(
@@ -186,14 +192,105 @@ oppia.directive('simpleEditorTab', [function() {
                 }]
               );
             }
-          }, {
+          }];
+
+          var SUPPORTED_INTERACTION_IDS = [
+            'MultipleChoiceInput',
+            'TextInput',
+            'ItemSelectionInput',
+            'NumericInput'
+          ];
+
+          // Get the order of states, if the exploration is linear and uses
+          // only "supported" interactions. If it is not linear, switch to the
+          // full editor.
+          var simpleEditorCanBeUsed = true;
+          var stateNamesInOrder = [];
+          var currentStateName = explorationInitStateNameService.savedMemento;
+          while (currentStateName) {
+            if (stateNamesInOrder.indexOf(currentStateName) !== -1) {
+              simpleEditorCanBeUsed = false;
+              break;
+            }
+            stateNamesInOrder.push(currentStateName);
+
+            var stateData = explorationStatesService.getState(
+              currentStateName);
+            var interactionId = stateData.interaction.id;
+            if (!interactionId) {
+              break;
+            }
+
+            if (SUPPORTED_INTERACTION_IDS.indexOf(interactionId) === -1) {
+              simpleEditorCanBeUsed = false;
+              break;
+            }
+
+            // Is the default answer group a self-loop, and is there exactly
+            // one non-self-loop destination among the non-default answer
+            // groups, and are there no fallbacks or param changes?
+            // TODO(sll): This needs to be generalized into a per-interaction
+            // validity check, that also includes checks for the customization
+            // args.
+            var destinationStateNames = [];
+            stateData.interaction.answer_groups.forEach(function(group) {
+              if (group.outcome.dest !== currentStateName) {
+                destinationStateNames.push(group.outcome.dest);
+              }
+            });
+
+            var defaultOutcome = stateData.interaction.default_outcome;
+            if (destinationStateNames.length > 1 ||
+                stateData.param_changes.length > 0 ||
+                defaultOutcome.dest !== currentStateName ||
+                defaultOutcome.param_changes.length > 0 ||
+                stateData.interaction.fallbacks.length > 0) {
+              simpleEditorCanBeUsed = false;
+              break;
+            }
+
+            currentStateName = destinationStateNames[0];
+          }
+
+          if (!simpleEditorCanBeUsed) {
+            $scope.setEditorModeToFull();
+            return;
+          }
+
+          // The number of fields to show:
+          // - If there is only one state and its content and interaction id
+          //   are empty, and the title is also empty, show just one field for
+          //   the title.
+          // - If there is only one state and its content and interaction id
+          //   are empty, but the title is filled, show two fields.
+          // - Otherwise, show (two plus the number of states) fields.
+          $scope.numElementsToShow = 2 + stateNamesInOrder.length;
+          if (stateNamesInOrder.length === 1) {
+            var initStateContent = (
+              explorationStatesService.getStateContentMemento(
+                stateNamesInOrder[0]).value);
+            var initStateInteractionId = explorationStatesService.getState(
+              stateNamesInOrder[0]).interaction.id;
+            if (!initStateContent && !initStateInteractionId) {
+              if (explorationTitleService.savedMemento) {
+                $scope.numElementsToShow = 2;
+              } else {
+                $scope.numElementsToShow = 1;
+              }
+            }
+          }
+
+          // TODO(sll): For every state in stateNamesInOrder, we need to add
+          // an entry in the list of fields corresponding to its interaction
+          // id.
+
+          var QUESTION_TEMPLATE = [{
             id: 'question1Id',
             directiveName: 'html-field',
             header: 'Question 1',
             sidebarLabel: 'Question 1',
             indentSidebarLabel: false,
             isPrefilled: false,
-            enabled: false,
             getInitDisplayedValue: function() {
               return explorationStatesService.getStateContentMemento(
                 'Question 1')[0].value;
@@ -217,7 +314,6 @@ oppia.directive('simpleEditorTab', [function() {
             sidebarLabel: null,
             indentSidebarLabel: null,
             isPrefilled: true,
-            enabled: false,
             getInitDisplayedValue: function() {
               return explorationStatesService.getInteractionIdMemento(
                 'Question 1');
@@ -239,7 +335,6 @@ oppia.directive('simpleEditorTab', [function() {
             sidebarLabel: 'Prompt',
             indentSidebarLabel: true,
             isPrefilled: false,
-            enabled: false,
             getInitDisplayedValue: function() {
               return explorationStatesService.getInteractionCustomizationArgs(
                 'Question 1');
@@ -258,7 +353,6 @@ oppia.directive('simpleEditorTab', [function() {
             sidebarLabel: 'Correct Answer',
             indentSidebarLabel: true,
             isPrefilled: false,
-            enabled: false,
             getInitDisplayedValue: function() {
             },
             isFilledOut: function() {
@@ -272,19 +366,27 @@ oppia.directive('simpleEditorTab', [function() {
             sidebarLabel: 'Hint',
             indentSidebarLabel: true,
             isPrefilled: false,
-            enabled: false,
             getInitDisplayedValue: function() {
             },
             isFilledOut: function() {
             },
             save: function() {
             }
+          }, {
+            id: 'question1BridgeText',
+            directiveName: 'html-field',
+            header: 'Bridge Text',
+            sidebarLabel: 'Bridge Text',
+            indentSidebarLabel: true,
+            isPrefilled: false,
+            getInitDisplayedValue: function() {
+              return '';
+            },
+            isFilledOut: function() {
+            },
+            save: function() {
+            }
           }];
-
-          // TODO(sll): Generalize this so that it enables more fields
-          // depending on what the creator has filled out previously. The code
-          // below handles only the "new exploration" case.
-          $scope.fields[0].enabled = true;
 
           // Give the page a little while to load, then scroll so that the first
           // element is in focus.

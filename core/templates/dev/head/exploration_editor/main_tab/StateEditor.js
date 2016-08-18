@@ -21,13 +21,11 @@ oppia.controller('StateEditor', [
   'editabilityService', 'explorationStatesService', 'INTERACTION_SPECS',
   'explorationInitStateNameService', 'explorationAdvancedFeaturesService',
   'UrlInterpolationService', 'editorFirstTimeEventsService',
-  'EditorModeService',
   function(
       $scope, $rootScope, editorContextService, changeListService,
       editabilityService, explorationStatesService, INTERACTION_SPECS,
       explorationInitStateNameService, explorationAdvancedFeaturesService,
-      UrlInterpolationService, editorFirstTimeEventsService,
-      EditorModeService) {
+      UrlInterpolationService, editorFirstTimeEventsService) {
     $scope.STATE_CONTENT_SCHEMA = {
       type: 'html'
     };
@@ -51,9 +49,7 @@ oppia.controller('StateEditor', [
     };
 
     $scope.$on('refreshStateEditor', function() {
-      if (EditorModeService.getMode() === 'full') {
-        $scope.initStateEditor();
-      }
+      $scope.initStateEditor();
     });
 
     $scope.$on('refreshStateContent', function() {

@@ -1,0 +1,20 @@
+<script type="text/ng-template" id="editor/question">
+  <div ng-if="interaction.id">
+    <select class="form-control"
+            ng-model="interaction.id"
+            ng-change="saveInteractionId()"
+            ng-options="interactionData.id as interactionData.name for interactionData in INTERACTION_DETAILS">
+    </select>
+  </div>
+
+  <div ng-if="interaction.id === 'MultipleChoiceInput'">
+
+    <div ng-repeat="field in fields track by $index">
+      <div ng-if="field.directiveName === 'multiple-choice-prompt'">
+        <multiple-choice-prompt init-customization-args="field.initCustomizationArgs()"
+                                on-edit="field.save">
+        </multiple-choice-prompt>
+      </div>
+    </div>
+  </div>
+</script>

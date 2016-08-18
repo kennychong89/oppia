@@ -1,2 +1,19 @@
 <script type="text/ng-template" id="interaction/multipleChoicePrompt">
+  <div style="width: 100%; margin-top: 20px; background-color: #f0f0f0;">
+    <ul>
+      <li ng-repeat="field in fields" style="border-bottom: 1px; width: 100%;">
+        <button ng-click="field.deleteItem()" style="border: 0; float: right;">
+          X
+        </button>
+        <html-field init-displayed-value="field.initDisplayedValue()"
+                    identifier="needToFigureThisOut"
+                    on-finish-editing="field.save">
+        </html-field>
+      </li>
+    </ul>
+
+    <button ng-click="addChoice()" style="border: 0; margin-left: 20px;">
+      + &nbsp;&nbsp;&nbsp; Add option
+    </button>
+  </div>
 </script>

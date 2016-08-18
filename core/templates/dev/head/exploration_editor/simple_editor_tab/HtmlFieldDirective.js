@@ -31,7 +31,6 @@ oppia.directive('htmlField', [function() {
       };
 
       $scope.displayedValue = $scope.initDisplayedValue();
-
       $scope.$on('externalOpen', function(evt, identifier) {
         $scope.displayedValue = $scope.initDisplayedValue();
         if (identifier === $scope.identifier) {

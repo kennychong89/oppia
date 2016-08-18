@@ -23,6 +23,11 @@ oppia.value('duScrollBottomSpy', true);
 // respective sections (rather than the entire sections themselves).
 oppia.value('duScrollGreedy', true);
 
+oppia.value('INTERACTION_DETAILS', [{
+  id: 'MultipleChoiceInput',
+  name: 'Multiple choice'
+}]);
+
 oppia.directive('simpleEditorTab', [function() {
   return {
     restrict: 'E',
@@ -31,12 +36,12 @@ oppia.directive('simpleEditorTab', [function() {
       '$scope', '$document', '$rootScope', '$anchorScroll', '$window',
       '$timeout', 'EditorModeService', 'explorationTitleService',
       'duScrollDuration', 'explorationStatesService',
-      'explorationInitStateNameService',
+      'explorationInitStateNameService', 'INTERACTION_DETAILS',
       function(
           $scope, $document, $rootScope, $anchorScroll, $window,
           $timeout, EditorModeService, explorationTitleService,
           duScrollDuration, explorationStatesService,
-          explorationInitStateNameService) {
+          explorationInitStateNameService, INTERACTION_DETAILS) {
         $scope.setEditorModeToFull = EditorModeService.setModeToFull;
         $scope.explorationTitleService = explorationTitleService;
         $scope.fields = [];
@@ -186,20 +191,23 @@ oppia.directive('simpleEditorTab', [function() {
             },
             save: function(newValue) {
               explorationStatesService.saveStateContent(
-                'Introduction', [{
+                explorationInitStateNameService.savedMemento, [{
                   type: 'text',
                   value: newValue
                 }]
               );
+
+              if ($scope.fields.length === 2) {
+                $scope.fields.push({
+                  id: 'question1Id',
+                  directiveName: 'question',
+                  sidebarLabel: 'Question 1'
+                });
+              }
+
+              $scope.numElementsToShow = Math.max($scope.numElementsToShow, 3);
             }
           }];
-
-          var SUPPORTED_INTERACTION_IDS = [
-            'MultipleChoiceInput',
-            'TextInput',
-            'ItemSelectionInput',
-            'NumericInput'
-          ];
 
           // Get the order of states, if the exploration is linear and uses
           // only "supported" interactions. If it is not linear, switch to the
@@ -207,7 +215,18 @@ oppia.directive('simpleEditorTab', [function() {
           var simpleEditorCanBeUsed = true;
           var stateNamesInOrder = [];
           var currentStateName = explorationInitStateNameService.savedMemento;
+          var allowedInteractionIds = INTERACTION_DETAILS.map(
+            function(interactionData) {
+              return interactionData.id;
+            }
+          );
+          var iterations = 0;
           while (currentStateName) {
+            iterations += 1;
+            if (iterations > 100) {
+              console.error('Too many iterations in while loop');
+              break;
+            }
             if (stateNamesInOrder.indexOf(currentStateName) !== -1) {
               simpleEditorCanBeUsed = false;
               break;
@@ -221,7 +240,7 @@ oppia.directive('simpleEditorTab', [function() {
               break;
             }
 
-            if (SUPPORTED_INTERACTION_IDS.indexOf(interactionId) === -1) {
+            if (allowedInteractionIds.indexOf(interactionId) === -1) {
               simpleEditorCanBeUsed = false;
               break;
             }
@@ -268,7 +287,7 @@ oppia.directive('simpleEditorTab', [function() {
           if (stateNamesInOrder.length === 1) {
             var initStateContent = (
               explorationStatesService.getStateContentMemento(
-                stateNamesInOrder[0]).value);
+                stateNamesInOrder[0])[0].value);
             var initStateInteractionId = explorationStatesService.getState(
               stateNamesInOrder[0]).interaction.id;
             if (!initStateContent && !initStateInteractionId) {
@@ -280,113 +299,33 @@ oppia.directive('simpleEditorTab', [function() {
             }
           }
 
+          var getNewMultipleChoiceTemplate = function(questionIndex) {
+            var newId = Math.random().toString(36).slice(2);
+            var stateName = stateNamesInOrder[questionIndex];
+            return {
+              id: newId,
+              directiveName: 'question',
+              header: 'Question ' + (questionIndex + 1),
+              sidebarLabel: 'Question ' + (questionIndex + 1),
+              indentSidebarLabel: false,
+              isPrefilled: false,
+              stateName: stateName,
+              getInitDisplayedValue: function() {
+                return explorationStatesService.getState(stateName);
+              },
+              isFilledOut: function() {
+                return false;
+              },
+              save: function() {}
+            };
+          };
+
           // TODO(sll): For every state in stateNamesInOrder, we need to add
           // an entry in the list of fields corresponding to its interaction
           // id.
-
-          var QUESTION_TEMPLATE = [{
-            id: 'question1Id',
-            directiveName: 'html-field',
-            header: 'Question 1',
-            sidebarLabel: 'Question 1',
-            indentSidebarLabel: false,
-            isPrefilled: false,
-            getInitDisplayedValue: function() {
-              return explorationStatesService.getStateContentMemento(
-                'Question 1')[0].value;
-            },
-            isFilledOut: function() {
-              return !!explorationStatesService.getStateContentMemento(
-                'Question 1')[0].value;
-            },
-            save: function(newValue) {
-              explorationStatesService.saveStateContent(
-                'Question 1', [{
-                  type: 'text',
-                  value: newValue
-                }]
-              );
-            }
-          }, {
-            id: 'question1InteractionId',
-            directiveName: 'interaction-selector',
-            header: null,
-            sidebarLabel: null,
-            indentSidebarLabel: null,
-            isPrefilled: true,
-            getInitDisplayedValue: function() {
-              return explorationStatesService.getInteractionIdMemento(
-                'Question 1');
-            },
-            isFilledOut: function() {
-              return !!explorationStatesService.getInteractionIdMemento(
-                'Question 1');
-            },
-            save: function(newValue) {
-              explorationStatesService.saveInteractionId(
-                'Question 1', newValue);
-              // TODO(sll): Fire an event to update the prompt, correct answer
-              // and hint fields.
-            }
-          }, {
-            id: 'question1Prompt',
-            directiveName: 'multiple-choice-prompt',
-            header: 'Prompt',
-            sidebarLabel: 'Prompt',
-            indentSidebarLabel: true,
-            isPrefilled: false,
-            getInitDisplayedValue: function() {
-              return explorationStatesService.getInteractionCustomizationArgs(
-                'Question 1');
-            },
-            isFilledOut: function() {
-              // TODO
-            },
-            save: function(newValue) {
-              explorationStatesService.saveInteractionCustomizationArgs(
-                'Question 1', newValue);
-            }
-          }, {
-            id: 'question1CorrectAnswer',
-            directiveName: 'correct-answer-field',
-            header: 'Correct Answer',
-            sidebarLabel: 'Correct Answer',
-            indentSidebarLabel: true,
-            isPrefilled: false,
-            getInitDisplayedValue: function() {
-            },
-            isFilledOut: function() {
-            },
-            save: function() {
-            }
-          }, {
-            id: 'question1Hint',
-            directiveName: 'hint-field',
-            header: 'Hint',
-            sidebarLabel: 'Hint',
-            indentSidebarLabel: true,
-            isPrefilled: false,
-            getInitDisplayedValue: function() {
-            },
-            isFilledOut: function() {
-            },
-            save: function() {
-            }
-          }, {
-            id: 'question1BridgeText',
-            directiveName: 'html-field',
-            header: 'Bridge Text',
-            sidebarLabel: 'Bridge Text',
-            indentSidebarLabel: true,
-            isPrefilled: false,
-            getInitDisplayedValue: function() {
-              return '';
-            },
-            isFilledOut: function() {
-            },
-            save: function() {
-            }
-          }];
+          for (var i = 0; i < stateNamesInOrder.length; i++) {
+            $scope.fields.push(getNewMultipleChoiceTemplate(i));
+          }
 
           // Give the page a little while to load, then scroll so that the first
           // element is in focus.

@@ -21,37 +21,53 @@ oppia.directive('multipleChoicePrompt', [function() {
     restrict: 'E',
     templateUrl: 'interaction/multipleChoicePrompt',
     scope: {
-      initDisplayedValue: '&',
+      initCustomizationArgs: '&',
       identifier: '@',
-      onFinishEditing: '='
+      onEdit: '='
     },
     controller: ['$scope', 'focusService', function($scope, focusService) {
-      $scope.SCHEMA = {
-        type: 'html'
+      var generateField = function(index) {
+        return {
+          id: 'choice' + index,
+          initDisplayedValue: function() {
+            return $scope.customizationArgs.choices.value[index];
+          },
+          isFilledOut: function() {
+            return false;
+          },
+          deleteItem: function() {
+            $scope.customizationArgs.choices.value.splice(index, 1);
+            $scope.onEdit($scope.customizationArgs);
+            init();
+          },
+          save: function(newItem) {
+            $scope.customizationArgs.choices.value[index] = newItem;
+            $scope.onEdit($scope.customizationArgs);
+          }
+        };
       };
 
-      $scope.displayedValue = $scope.initDisplayedValue();
-
-      $scope.$on('externalOpen', function(evt, identifier) {
-        $scope.displayedValue = $scope.initDisplayedValue();
-        if (identifier === $scope.identifier) {
-          $scope.startEditing();
-        }
-      });
-
-      $scope.inEditMode = false;
       $scope.focusLabel = focusService.generateFocusLabel();
 
-      $scope.startEditing = function() {
-        $scope.inEditMode = true;
-        focusService.setFocus($scope.focusLabel);
+      var init = function() {
+        $scope.customizationArgs = $scope.initCustomizationArgs();
+        $scope.fields = [];
+        for (var i = 0; i < $scope.customizationArgs.choices.value.length;
+             i++) {
+          $scope.fields.push(generateField(i));
+        }
       };
 
-      $scope.finishEditing = function() {
-        $scope.inEditMode = false;
-        $scope.onFinishEditing($scope.displayedValue);
-        $scope.$emit('fieldEditorClosed', $scope.identifier);
+      $scope.addChoice = function() {
+        $scope.customizationArgs.choices.value.push('');
+        $scope.onEdit($scope.customizationArgs);
+        init();
       };
+
+      init();
+      $scope.$on('externalOpen', function() {
+        init();
+      });
     }]
   };
 }]);

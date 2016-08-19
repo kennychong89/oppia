@@ -68,7 +68,6 @@ oppia.directive('question', [function() {
         $scope.fields = [{
           id: 'prompt',
           directiveName: 'multiple-choice-prompt',
-          header: 'What would you like to teach?',
           sidebarLabel: 'Prompt',
           initCustomizationArgs: function() {
             return $scope.initDisplayedValue().interaction.customization_args;
@@ -79,6 +78,22 @@ oppia.directive('question', [function() {
           save: function(newCustomizationArgs) {
             explorationStatesService.saveInteractionCustomizationArgs(
               $scope.getStateName(), newCustomizationArgs);
+            // Refresh descendants.
+            $scope.$broadcast('externalOpen');
+          }
+        }, {
+          id: 'correct-answer',
+          directiveName: 'multiple-choice-correct-answer',
+          sidebarLabel: 'Correct answer',
+          initCustomizationArgs: function() {
+            return $scope.initDisplayedValue().interaction.customization_args;
+          },
+          initAnswerGroups: function() {
+            return $scope.initDisplayedValue().interaction.answer_groups;
+          },
+          save: function(newAnswerGroups) {
+            explorationStatesService.saveInteractionAnswerGroups(
+              $scope.getStateName(), newAnswerGroups);
           }
         }];
 

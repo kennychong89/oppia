@@ -13,7 +13,8 @@
 // limitations under the License.
 
 /**
- * @fileoverview Directive for an HTML field in the simple editor view.
+ * @fileoverview Directive for the multiple choice prompt in the simple editor
+ *               view.
  */
 
 oppia.directive('multipleChoicePrompt', [function() {

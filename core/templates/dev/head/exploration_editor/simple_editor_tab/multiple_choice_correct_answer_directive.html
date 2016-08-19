@@ -1,0 +1,17 @@
+<script type="text/ng-template" id="interaction/multipleChoiceCorrectAnswer">
+  <div style="width: 100%; margin-top: 20px; background-color: #f0f0f0;">
+    <div class="multiple-choice-option-container" ng-repeat="choice in choices track by $index">
+      <button class="multiple-choice-option" ng-click="selectCorrectAnswer($index)">
+        <div class="multiple-choice-radio-button-container">
+          <span class="multiple-choice-outer-radio-button">
+            <!-- TODO(sll): This should be selected if the choice has been made. -->
+            <span class="multiple-choice-inner-radio-button"></span>
+          </span>
+        </div>
+        <div class="multiple-choice-content-container">
+          <span angular-html-bind="choice"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</script>

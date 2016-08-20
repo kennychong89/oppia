@@ -69,7 +69,6 @@ oppia.directive('question', [function() {
         $scope.fields = [{
           id: 'prompt',
           directiveName: 'multiple-choice-prompt',
-          sidebarLabel: 'Prompt',
           initCustomizationArgs: function() {
             return $scope.initDisplayedValue().interaction.customization_args;
           },
@@ -84,7 +83,6 @@ oppia.directive('question', [function() {
         }, {
           id: 'correct-answer',
           directiveName: 'multiple-choice-correct-answer',
-          sidebarLabel: 'Correct answer',
           initCustomizationArgs: function() {
             return $scope.initDisplayedValue().interaction.customization_args;
           },
@@ -96,6 +94,41 @@ oppia.directive('question', [function() {
               $scope.getStateName(), newAnswerGroups);
             $scope.sidebarConfig.numElementsToShow = Math.max(
               $scope.sidebarConfig.numElementsToShow, 3);
+          }
+        }, {
+          id: 'hints',
+          directiveName: 'multiple-choice-hints',
+          initCustomizationArgs: function() {
+            return $scope.initDisplayedValue().interaction.customization_args;
+          },
+          initAnswerGroups: function() {
+            return $scope.initDisplayedValue().interaction.answer_groups;
+          },
+          initDefaultOutcome: function() {
+            return $scope.initDisplayedValue().interaction.default_outcome;
+          },
+          save: function(newAnswerGroups) {
+            explorationStatesService.saveInteractionAnswerGroups(
+              $scope.getStateName(), newAnswerGroups);
+            $scope.sidebarConfig.numElementsToShow = Math.max(
+              $scope.sidebarConfig.numElementsToShow, 4);
+          }
+        }, {
+          id: 'html-field',
+          directiveName: 'html-field',
+          initContent: function() {
+            var interaction = $scope.initDisplayedValue().interaction;
+            return explorationStatesService.getStateContentMemento(
+              interaction.answer_groups[0].outcome.dest)[0].value;
+          },
+          save: function(newContent) {
+            var interaction = $scope.initDisplayedValue().interaction;
+            explorationStatesService.saveStateContent(
+              interaction.answer_groups[0].outcome.dest, [{
+                type: 'text',
+                value: newContent
+              }]
+            );
           }
         }];
 

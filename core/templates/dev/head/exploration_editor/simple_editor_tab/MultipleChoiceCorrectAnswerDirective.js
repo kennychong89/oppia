@@ -25,7 +25,8 @@ oppia.directive('multipleChoiceCorrectAnswer', [function() {
       initCustomizationArgs: '&',
       initAnswerGroups: '&',
       identifier: '@',
-      onEdit: '='
+      onEdit: '=',
+      getStateName: '&stateName'
     },
     controller: [
       '$scope', 'focusService', 'explorationStatesService',
@@ -40,25 +41,46 @@ oppia.directive('multipleChoiceCorrectAnswer', [function() {
 
         $scope.selectCorrectAnswer = function(index) {
           if ($scope.answerGroups.length === 0) {
-            // TODO(sll): Generate a new state name for this.
-            explorationStatesService.addState('PLACEHOLDER', function() {
-              $scope.answerGroups.push({
-                outcome: {
-                  // TODO(sll): Generate a new state name for this.
-                  dest: 'PLACEHOLDER',
-                  feedback: '',
-                  param_changes: []
+            $scope.answerGroups.push({
+              outcome: {
+                dest: $scope.getStateName(),
+                feedback: [''],
+                param_changes: []
+              },
+              rule_specs: [{
+                inputs: {
+                  x: index
                 },
-                rule_specs: [{
-                  inputs: {
-                    x: index
-                  },
-                  rule_type: 'Equals'
-                }]
-              });
+                rule_type: 'Equals'
+              }]
             });
           } else {
             $scope.answerGroups[0].rule_specs[0].inputs.x = index;
+          }
+
+          $scope.onEdit($scope.answerGroups);
+          init();
+        };
+
+        // TODO(sll): Add this incrementally, once there's a correct answer.
+        $scope.initCorrectAnswerFeedback = function() {
+          return $scope.answerGroups[0].outcome.feedback[0];
+        };
+
+        $scope.saveCorrectAnswerFeedback = function(newFeedback) {
+          if ($scope.answerGroups.length === 0) {
+            throw Error('Empty answer groups detected');
+          }
+
+          $scope.answerGroups[0].outcome.feedback[0] = newFeedback;
+
+          if (!explorationStatesService.getState('PLACEHOLDER')) {
+            // TODO(sll): Generate a new state name for this in the linear
+            // sequence.
+            explorationStatesService.addState('PLACEHOLDER', function() {
+              // TODO(sll): Generate a new state name for this.
+              $scope.answerGroups[0].outcome.dest = 'PLACEHOLDER';
+            });
           }
 
           $scope.onEdit($scope.answerGroups);

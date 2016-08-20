@@ -1,4 +1,7 @@
 <script type="text/ng-template" id="interaction/multipleChoiceCorrectAnswer">
+  <div class="header">
+    Pick the correct answer
+  </div>
   <div style="width: 100%; margin-top: 20px; background-color: #f0f0f0;">
     <div class="multiple-choice-option-container" ng-repeat="choice in choices track by $index">
       <button class="multiple-choice-option" ng-click="selectCorrectAnswer($index)">
@@ -12,6 +15,18 @@
           <span angular-html-bind="choice"></span>
         </div>
       </button>
+    </div>
+  </div>
+
+  <div ng-if="answerGroups.length > 0">
+    <div class="header">
+      Provide additional explanation for the right answer
+    </div>
+    <div style="width: 100%; margin-top: 20px; background-color: #f0f0f0;">
+      <html-field init-displayed-value="initCorrectAnswerFeedback()"
+                  identifier="needToFigureThisOut"
+                  on-finish-editing="saveCorrectAnswerFeedback">
+      </html-field>
     </div>
   </div>
 </script>

@@ -310,6 +310,7 @@ oppia.directive('simpleEditorTab', [function() {
               sidebarLabel: 'Question ' + (questionIndex + 1),
               indentSidebarLabel: false,
               isPrefilled: false,
+              // TODO(sll): Warning -- this does not change?
               stateName: stateName,
               sidebarConfig: {
                 numElementsToShow: isLastQuestion ? 1 : 4

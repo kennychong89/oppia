@@ -1,13 +1,18 @@
 <script type="text/ng-template" id="editor/htmlField">
-  <div ng-show="!inEditMode" ng-click="startEditing()"
-       class="view-only">
+  <div ng-show="!inEditMode" ng-click="startEditing()" class="view-only">
     <span angular-html-bind="displayedValue"></span>
+    <!-- TODO(sll): This should also show if displayedValue normalizes to an empty string. -->
+    <span ng-if="!displayedValue" style="opacity: 0.6;">
+      <[placeholder]>
+    </span>
   </div>
 
-  <div ng-show="inEditMode">
+  <div ng-show="inEditMode" class="edit-mode">
     <schema-based-editor schema="SCHEMA" local-value="displayedValue"
                          label-for-focus-target="focusLabel">
     </schema-based-editor>
+    <span class="bar"></span>
+
     <button type="button" ng-click="finishEditing()">Save</button>
   </div>
 </script>
@@ -17,5 +22,34 @@
     background-color: #f0f0f0;
     border-radius: 5px;
     padding: 10px 20px;
+  }
+
+  html-field .edit-mode [text-angular] {
+    border: none;
+    box-shadow: 0 2px 2px 0 rgba(0,0,0,0.25);
+    outline: 0;
+    padding: 0 20px;
+    width: 100%;
+  }
+
+  html-field .edit-mode .bar {
+    display: block;
+    position: relative;
+    width: 100%;
+  }
+  html-field .edit-mode .bar:before, html-field .edit-mode .bar:after {
+    background: #66bb6a;
+    bottom: 1px;
+    content: '';
+    height: 2px;
+    position: absolute;
+    transition: 0.2s ease all;
+    width: 0;
+  }
+  html-field .edit-mode .bar:before {
+    left: 50%;
+  }
+  html-field .edit-mode .bar:after {
+    right: 50%;
   }
 </style>

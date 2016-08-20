@@ -23,6 +23,7 @@ oppia.directive('htmlField', [function() {
     scope: {
       initDisplayedValue: '&',
       identifier: '@',
+      placeholder: '@',
       onFinishEditing: '='
     },
     controller: ['$scope', 'focusService', function($scope, focusService) {

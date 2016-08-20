@@ -24,7 +24,8 @@ oppia.directive('question', [function() {
       initDisplayedValue: '&',
       identifier: '@',
       onFinishEditing: '=',
-      getStateName: '&stateName'
+      getStateName: '&stateName',
+      sidebarConfig: '='
     },
     controller: [
       '$scope', 'focusService', 'INTERACTION_DETAILS', 'INTERACTION_SPECS',
@@ -72,14 +73,13 @@ oppia.directive('question', [function() {
           initCustomizationArgs: function() {
             return $scope.initDisplayedValue().interaction.customization_args;
           },
-          isFilledOut: function() {
-            return false;
-          },
           save: function(newCustomizationArgs) {
             explorationStatesService.saveInteractionCustomizationArgs(
               $scope.getStateName(), newCustomizationArgs);
             // Refresh descendants.
             $scope.$broadcast('externalOpen');
+            $scope.sidebarConfig.numElementsToShow = Math.max(
+              $scope.sidebarConfig.numElementsToShow, 2);
           }
         }, {
           id: 'correct-answer',
@@ -94,6 +94,8 @@ oppia.directive('question', [function() {
           save: function(newAnswerGroups) {
             explorationStatesService.saveInteractionAnswerGroups(
               $scope.getStateName(), newAnswerGroups);
+            $scope.sidebarConfig.numElementsToShow = Math.max(
+              $scope.sidebarConfig.numElementsToShow, 3);
           }
         }];
 
@@ -106,6 +108,11 @@ oppia.directive('question', [function() {
           explorationStatesService.saveInteractionCustomizationArgs(
             $scope.getStateName(), newCustomizationArgs);
         };
+
+        // TODO(sll): This should reflect what's currently completed in this
+        // question.
+        $scope.sidebarConfig.numElementsToShow = Math.max(
+          $scope.sidebarConfig.numElementsToShow, 1);
 
         $scope.inEditMode = false;
         $scope.focusLabel = focusService.generateFocusLabel();

@@ -8,24 +8,28 @@
   </div>
 
   <div ng-if="interaction.id === 'MultipleChoiceInput'">
-    <div ng-repeat="field in fields track by $index">
+    <div ng-repeat="field in fields track by $index" ng-show="$index < sidebarConfig.numElementsToShow">
       <div ng-if="field.directiveName === 'multiple-choice-prompt'">
         <multiple-choice-prompt init-customization-args="field.initCustomizationArgs()"
                                 on-edit="field.save">
         </multiple-choice-prompt>
       </div>
+
       <div ng-if="field.directiveName === 'multiple-choice-correct-answer'">
+        <div class="header" id="<[field.id]>">Correct Answer</div>
         <multiple-choice-correct-answer init-customization-args="field.initCustomizationArgs()"
                                         init-answer-groups="field.initAnswerGroups()"
                                         on-edit="field.save">
         </multiple-choice-correct-answer>
       </div>
+
       <div ng-if="field.directiveName === 'multiple-choice-correct-explanation'">
         <multiple-choice-correct-explanation init-customization-args="field.initCustomizationArgs()"
                                              init-answer-groups="field.initAnswerGroups()"
                                              on-edit="field.save">
         </multiple-choice-correct-explanation>
       </div>
+
       <div ng-if="field.directiveName === 'multiple-choice-other-answers'">
         <multiple-choice-other-answers init-customization-args="field.initCustomizationArgs()"
                                        init-answer-groups="field.initAnswerGroups()"

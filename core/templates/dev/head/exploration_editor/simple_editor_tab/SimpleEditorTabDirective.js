@@ -299,7 +299,8 @@ oppia.directive('simpleEditorTab', [function() {
             }
           }
 
-          var getNewMultipleChoiceTemplate = function(questionIndex) {
+          var getNewMultipleChoiceTemplate = function(
+              questionIndex, isLastQuestion) {
             var newId = Math.random().toString(36).slice(2);
             var stateName = stateNamesInOrder[questionIndex];
             return {
@@ -310,6 +311,15 @@ oppia.directive('simpleEditorTab', [function() {
               indentSidebarLabel: false,
               isPrefilled: false,
               stateName: stateName,
+              sidebarConfig: {
+                numElementsToShow: isLastQuestion ? 1 : 4
+              },
+              subfields: [
+                'Prompt',
+                'Correct answer',
+                'Hints',
+                'Bridge text'
+              ],
               getInitDisplayedValue: function() {
                 return explorationStatesService.getState(stateName);
               },
@@ -324,7 +334,8 @@ oppia.directive('simpleEditorTab', [function() {
           // an entry in the list of fields corresponding to its interaction
           // id.
           for (var i = 0; i < stateNamesInOrder.length; i++) {
-            $scope.fields.push(getNewMultipleChoiceTemplate(i));
+            $scope.fields.push(getNewMultipleChoiceTemplate(
+              i, i === stateNamesInOrder.length - 1));
           }
 
           // Give the page a little while to load, then scroll so that the first

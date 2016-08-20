@@ -2,8 +2,7 @@
   <div style="height: 100%;">
     <div class="sidebar">
       <ul>
-        <li class="sidebar-item" ng-repeat="field in fields track by $index"
-            ng-class="{'sidebar-item-indented': field.indentSidebarLabel}">
+        <li class="sidebar-item" ng-repeat="field in fields track by $index">
           <span ng-if="$index < numElementsToShow">
             <a ng-if="scrollSpyIsActive" du-smooth-scroll="<[field.id]>"
                du-scrollspy ng-attr-offset="<[defaultScrollOffset]>">
@@ -14,6 +13,18 @@
           <span ng-if="$index >= numElementsToShow" class="sidebar-item-disabled">
             <[field.sidebarLabel]>
           </span>
+
+          <ul ng-if="$index >= 2">
+            <li class="sidebar-item sidebar-item-indented"
+                ng-repeat="subfield in field.subfields track by $index">
+              <span ng-if="$index < field.sidebarConfig.numElementsToShow">
+                <a><[subfield]></a>
+              </span>
+              <span ng-if="$index >= field.sidebarConfig.numElementsToShow" class="sidebar-item-disabled">
+                <[subfield]>
+              </span>
+            </li>
+          </ul>
         </li>
       </ul>
 
@@ -48,7 +59,8 @@
             <question init-displayed-value="field.getInitDisplayedValue()"
                       identifier="<[field.id]>"
                       on-finish-editing="field.save"
-                      state-name="field.stateName">
+                      state-name="field.stateName"
+                      sidebar-config="field.sidebarConfig">
             </question>
           </div>
         </div>

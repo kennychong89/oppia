@@ -33,8 +33,6 @@ oppia.value('INTERACTION_DETAILS', [{
       directiveName: 'question',
       header: 'Question ' + (questionIndex + 1),
       sidebarLabel: 'Question ' + (questionIndex + 1),
-      indentSidebarLabel: false,
-      isPrefilled: false,
       // TODO(sll): Warning -- this does not change?
       stateName: stateName,
       sidebarConfig: {
@@ -113,52 +111,24 @@ oppia.directive('simpleEditorTab', [function() {
             $scope.defaultScrollOffset);
         };
 
-        $scope.getLastSeenFieldIndex = function() {
-          for (var i = $scope.fields.length - 1; i >= 0; i--) {
-            if ($scope.fields[i].isFilledOut() &&
-                !$scope.fields[i].isPrefilled) {
-              return i;
-            }
-          }
-          // All fields are unseen.
-          return -1;
-        };
-
         $scope.getLastSeenFieldId = function() {
-          var lastSeenFieldIndex = $scope.getLastSeenFieldIndex();
-          if (lastSeenFieldIndex === -1) {
-            return null;
-          } else {
-            return $scope.fields[lastSeenFieldIndex].id;
+          if ($scope.numElementsToShow) {
+            return $scope.fields[$scope.numElementsToShow - 1].id;
           }
         };
 
-        $scope.getFirstUnseenFieldId = function() {
-          var lastSeenFieldIndex = $scope.getLastSeenFieldIndex();
-          if (lastSeenFieldIndex === $scope.fields.length - 1) {
-            return null;
-          } else {
-            return $scope.fields[lastSeenFieldIndex + 1].id;
-          }
-        };
-
-        // The "go forward" button only appears if you are on the last-filled
-        // item on the page, and no subsequent item is filled. Clicking on it
-        // navigates to the next field and opens it.
-        // If all fields have been filled, then the "go forward" button still
-        // appears, and clicking it adds a new question to the stack.
+        // The "go forward" button only appears if all fields have been filled.
+        // Clicking it adds a new question to the stack.
         $scope.goForward = function() {
-          var firstUnseenFieldId = $scope.getFirstUnseenFieldId();
+          // TODO(sll): The logic in this function needs to be redone.
+          if ($scope.numElementsToShow >= $scope.fields.length) {
+            return;
+          }
+          var firstUnseenFieldId = $scope.fields[$scope.numElementsToShow].id;
           if (firstUnseenFieldId === null) {
             // TODO(sll): Add a new question here, then scroll to it and open
             // its editor.
             return;
-          } else {
-            // Scroll to the field, and open its editor.
-            scrollToElement(firstUnseenFieldId);
-            $timeout(function() {
-              $scope.$broadcast('externalOpen', firstUnseenFieldId);
-            }, duScrollDuration);
           }
         };
 
@@ -193,8 +163,6 @@ oppia.directive('simpleEditorTab', [function() {
             directiveName: 'plaintext-field',
             header: 'What would you like to teach?',
             sidebarLabel: 'Title',
-            indentSidebarLabel: false,
-            isPrefilled: false,
             getInitDisplayedValue: function() {
               return explorationTitleService.displayed;
             },
@@ -216,8 +184,6 @@ oppia.directive('simpleEditorTab', [function() {
             directiveName: 'html-field',
             header: 'Introduction',
             sidebarLabel: 'Introduction',
-            indentSidebarLabel: false,
-            isPrefilled: false,
             getInitDisplayedValue: function() {
               return explorationStatesService.getStateContentMemento(
                 explorationInitStateNameService.savedMemento)[0].value;
@@ -314,30 +280,33 @@ oppia.directive('simpleEditorTab', [function() {
           }
 
           // The number of fields to show:
-          // - If there is only one state and its content and interaction id
-          //   are empty, and the title is also empty, show just one field for
-          //   the title.
-          // - If there is only one state and its content and interaction id
-          //   are empty, but the title is filled, show two fields.
-          // - Otherwise, show (two plus the number of states) fields.
-          $scope.numElementsToShow = 2 + stateNamesInOrder.length;
-          if (stateNamesInOrder.length === 1) {
-            var initStateContent = (
-              explorationStatesService.getStateContentMemento(
-                stateNamesInOrder[0])[0].value);
-            if (!initStateContent) {
-              if (explorationTitleService.savedMemento) {
-                $scope.numElementsToShow = 2;
-              } else {
-                $scope.numElementsToShow = 1;
-              }
+          // - If the title is empty, show just one field.
+          // - Otherwise, show (one plus the number of states) fields, plus
+          //   another one if the interaction id for the last state is
+          //   specified.
+          $scope.numElementsToShow = 1;
+          if (stateNamesInOrder.length > 1 ||
+              explorationTitleService.savedMemento) {
+            $scope.numElementsToShow = 1 + stateNamesInOrder.length;
+            var lastStateInteractionId = (
+              explorationStatesService.getState(
+                stateNamesInOrder[stateNamesInOrder.length - 1]
+              ).interaction.id);
+            if (lastStateInteractionId) {
+              $scope.numElementsToShow += 1;
             }
           }
 
           for (var i = 0; i < stateNamesInOrder.length; i++) {
             var state = explorationStatesService.getState(stateNamesInOrder[i]);
+
+            var interactionIdToCompareWith = state.interaction.id;
+            if (i === 0 && !state.interaction.id) {
+              interactionIdToCompareWith = INTERACTION_DETAILS[0].id;
+            }
+
             for (var j = 0; j < INTERACTION_DETAILS.length; j++) {
-              if (INTERACTION_DETAILS[j].id === state.interaction.id) {
+              if (INTERACTION_DETAILS[j].id === interactionIdToCompareWith) {
                 $scope.fields.push(INTERACTION_DETAILS[j].getNewTemplate(
                   i, i === stateNamesInOrder.length - 1, stateNamesInOrder[i],
                   generateRandomId));

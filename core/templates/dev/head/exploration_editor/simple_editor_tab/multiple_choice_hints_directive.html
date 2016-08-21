@@ -1,10 +1,10 @@
 <script type="text/ng-template" id="interaction/multipleChoiceHints">
-  <div class="header">
+  <div class="header" id="<[identifier]>">
     Provide a hint for all other answers
   </div>
 
   <html-field init-displayed-value="getDefaultFeedback()"
-              identifier="needToFigureThisOut"
+              identifier="<[identifier]>"
               on-finish-editing="save"
               placeholder="Type something">
   </html-field>

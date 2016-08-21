@@ -14,14 +14,18 @@
             <[field.sidebarLabel]>
           </span>
 
-          <ul ng-if="$index >= 2">
+          <ul ng-if="$index >= 2 && $index < numElementsToShow">
             <li class="sidebar-item sidebar-item-indented"
                 ng-repeat="subfield in field.subfields track by $index">
               <span ng-if="$index < field.sidebarConfig.numElementsToShow">
-                <a><[subfield]></a>
+                <a du-smooth-scroll="<[subfield.id]>" du-scrollspy
+                   ng-attr-offset="<[defaultScrollOffset]>">
+                  <[subfield.sidebarLabel]>
+                </a>
               </span>
-              <span ng-if="$index >= field.sidebarConfig.numElementsToShow" class="sidebar-item-disabled">
-                <[subfield]>
+              <span ng-if="$index >= field.sidebarConfig.numElementsToShow"
+                    class="sidebar-item-disabled">
+                <[subfield.sidebarLabel]>
               </span>
             </li>
           </ul>
@@ -56,11 +60,11 @@
             </html-field>
           </div>
           <div ng-if="field.directiveName === 'question'">
-            <question init-displayed-value="field.getInitDisplayedValue()"
-                      identifier="<[field.id]>"
+            <question identifier="<[field.id]>"
                       on-finish-editing="field.save"
                       state-name="field.stateName"
-                      sidebar-config="field.sidebarConfig">
+                      sidebar-config="field.sidebarConfig"
+                      subfields="field.subfields">
             </question>
           </div>
         </div>

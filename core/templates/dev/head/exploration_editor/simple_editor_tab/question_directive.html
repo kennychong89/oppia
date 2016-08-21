@@ -11,6 +11,7 @@
     <div ng-repeat="field in fields track by $index" ng-show="$index < sidebarConfig.numElementsToShow">
       <div ng-if="field.directiveName === 'multiple-choice-prompt'">
         <multiple-choice-prompt init-customization-args="field.initCustomizationArgs()"
+                                identifier="<[getSubfields()[0].id]>"
                                 on-edit="field.save">
         </multiple-choice-prompt>
       </div>
@@ -19,6 +20,7 @@
         <multiple-choice-correct-answer init-customization-args="field.initCustomizationArgs()"
                                         init-answer-groups="field.initAnswerGroups()"
                                         state-name="getStateName()"
+                                        identifier="<[getSubfields()[1].id]>"
                                         on-edit="field.save">
         </multiple-choice-correct-answer>
       </div>
@@ -27,16 +29,17 @@
         <multiple-choice-hints init-customization-args="field.initCustomizationArgs()"
                                init-answer-groups="field.initAnswerGroups()"
                                init-default-outcome="field.initDefaultOutcome()"
+                               identifier="<[getSubfields()[2].id]>"
                                on-edit="field.save">
         </multiple-choice-hints>
       </div>
 
       <div ng-if="field.directiveName === 'html-field'">
-        <div class="header">
+        <div class="header" id="<[getSubfields()[3].id]>">
           Bridge text
         </div>
         <html-field init-displayed-value="field.initContent()"
-                    identifier="<[field.id]>"
+                    identifier="<[getSubfields()[3].id]>"
                     on-finish-editing="field.save"
                     placeholder="Type the bridge text">
         </html-field>

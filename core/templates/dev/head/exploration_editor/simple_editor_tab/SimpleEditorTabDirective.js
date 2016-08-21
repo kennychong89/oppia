@@ -25,7 +25,40 @@ oppia.value('duScrollGreedy', true);
 
 oppia.value('INTERACTION_DETAILS', [{
   id: 'MultipleChoiceInput',
-  name: 'Multiple choice'
+  name: 'Multiple choice',
+  getNewTemplate: function(
+      questionIndex, isLastQuestion, stateName, generateRandomId) {
+    return {
+      id: generateRandomId(),
+      directiveName: 'question',
+      header: 'Question ' + (questionIndex + 1),
+      sidebarLabel: 'Question ' + (questionIndex + 1),
+      indentSidebarLabel: false,
+      isPrefilled: false,
+      // TODO(sll): Warning -- this does not change?
+      stateName: stateName,
+      sidebarConfig: {
+        numElementsToShow: isLastQuestion ? 1 : 4
+      },
+      subfields: [{
+        id: generateRandomId(),
+        sidebarLabel: 'Prompt'
+      }, {
+        id: generateRandomId(),
+        sidebarLabel: 'Correct answer'
+      }, {
+        id: generateRandomId(),
+        sidebarLabel: 'Hints'
+      }, {
+        id: generateRandomId(),
+        sidebarLabel: 'Bridge text'
+      }],
+      isFilledOut: function() {
+        return false;
+      },
+      save: function() {}
+    };
+  }
 }]);
 
 oppia.directive('simpleEditorTab', [function() {
@@ -45,6 +78,10 @@ oppia.directive('simpleEditorTab', [function() {
         $scope.setEditorModeToFull = EditorModeService.setModeToFull;
         $scope.explorationTitleService = explorationTitleService;
         $scope.fields = [];
+
+        var generateRandomId = function() {
+          return Math.random().toString(36).slice(2);
+        };
 
         $scope.defaultScrollOffset = Math.max(
           100, $window.innerHeight / 2 - 100);
@@ -288,9 +325,7 @@ oppia.directive('simpleEditorTab', [function() {
             var initStateContent = (
               explorationStatesService.getStateContentMemento(
                 stateNamesInOrder[0])[0].value);
-            var initStateInteractionId = explorationStatesService.getState(
-              stateNamesInOrder[0]).interaction.id;
-            if (!initStateContent && !initStateInteractionId) {
+            if (!initStateContent) {
               if (explorationTitleService.savedMemento) {
                 $scope.numElementsToShow = 2;
               } else {
@@ -299,44 +334,16 @@ oppia.directive('simpleEditorTab', [function() {
             }
           }
 
-          var getNewMultipleChoiceTemplate = function(
-              questionIndex, isLastQuestion) {
-            var newId = Math.random().toString(36).slice(2);
-            var stateName = stateNamesInOrder[questionIndex];
-            return {
-              id: newId,
-              directiveName: 'question',
-              header: 'Question ' + (questionIndex + 1),
-              sidebarLabel: 'Question ' + (questionIndex + 1),
-              indentSidebarLabel: false,
-              isPrefilled: false,
-              // TODO(sll): Warning -- this does not change?
-              stateName: stateName,
-              sidebarConfig: {
-                numElementsToShow: isLastQuestion ? 1 : 4
-              },
-              subfields: [
-                'Prompt',
-                'Correct answer',
-                'Hints',
-                'Bridge text'
-              ],
-              getInitDisplayedValue: function() {
-                return explorationStatesService.getState(stateName);
-              },
-              isFilledOut: function() {
-                return false;
-              },
-              save: function() {}
-            };
-          };
-
-          // TODO(sll): For every state in stateNamesInOrder, we need to add
-          // an entry in the list of fields corresponding to its interaction
-          // id.
           for (var i = 0; i < stateNamesInOrder.length; i++) {
-            $scope.fields.push(getNewMultipleChoiceTemplate(
-              i, i === stateNamesInOrder.length - 1));
+            var state = explorationStatesService.getState(stateNamesInOrder[i]);
+            for (var j = 0; j < INTERACTION_DETAILS.length; j++) {
+              if (INTERACTION_DETAILS[j].id === state.interaction.id) {
+                $scope.fields.push(INTERACTION_DETAILS[j].getNewTemplate(
+                  i, i === stateNamesInOrder.length - 1, stateNamesInOrder[i],
+                  generateRandomId));
+                break;
+              }
+            }
           }
 
           // Give the page a little while to load, then scroll so that the first

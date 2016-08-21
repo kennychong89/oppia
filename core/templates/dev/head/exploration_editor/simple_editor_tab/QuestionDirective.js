@@ -21,11 +21,11 @@ oppia.directive('question', [function() {
     restrict: 'E',
     templateUrl: 'editor/question',
     scope: {
-      initDisplayedValue: '&',
       identifier: '@',
       onFinishEditing: '=',
       getStateName: '&stateName',
-      sidebarConfig: '='
+      sidebarConfig: '=',
+      getSubfields: '&subfields'
     },
     controller: [
       '$scope', 'focusService', 'INTERACTION_DETAILS', 'INTERACTION_SPECS',
@@ -34,6 +34,10 @@ oppia.directive('question', [function() {
           $scope, focusService, INTERACTION_DETAILS, INTERACTION_SPECS,
           explorationStatesService) {
         $scope.INTERACTION_DETAILS = INTERACTION_DETAILS;
+
+        $scope.initDisplayedValue = function() {
+          return explorationStatesService.getState($scope.getStateName());
+        };
 
         var getNewCustomizationArgs = function(interactionId) {
           var customizationArgSpecs = INTERACTION_SPECS[
